@@ -43,7 +43,7 @@
             color: #fff; overflow: hidden; height: 100vh;
         }
 
-        /* ── Masquer entièrement le widget Salesforce ── */
+        /* ── Masquer le widget SF visuellement mais garder le DOM fonctionnel ── */
         .embeddedMessagingConversationButtonWrapper,
         .embeddedMessagingFrame,
         .embedded-messaging,
@@ -52,14 +52,8 @@
         iframe[name*="ESW"],
         div[data-embedded-messaging] {
             position: fixed !important;
-            left: -9999px !important;
-            top: -9999px !important;
-            width: 1px !important;
-            height: 1px !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-            overflow: hidden !important;
-            z-index: -1 !important;
+            left: -3000px !important;
+            top: 0 !important;
         }
 
         /* ── Loader ── */
@@ -299,8 +293,8 @@ const $ = id => document.getElementById(id);
 
 /* ══════════════════ THREE.JS ══════════════════ */
 const scene  = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(0, 1.5, 5);
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(0, 1.5, 3);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(innerWidth, innerHeight);
@@ -349,16 +343,17 @@ gl.load('tour_ia.glb', g => {
     const box = new THREE.Box3().setFromObject(model);
     const sz  = box.getSize(new THREE.Vector3());
     const ctr = box.getCenter(new THREE.Vector3());
+    const maxDim = Math.max(sz.x, sz.y, sz.z, 0.01);
 
-    const targetH = 3.5;
-    const s = targetH / Math.max(sz.y, 0.01);
+    const targetSize = 4;
+    const s = targetSize / maxDim;
     model.scale.setScalar(s);
 
     box.setFromObject(model);
     const nc = box.getCenter(new THREE.Vector3());
-    model.position.x -= nc.x;
+    model.position.set(-nc.x, -nc.y, -nc.z);
+    box.setFromObject(model);
     model.position.y -= box.min.y;
-    model.position.z -= nc.z;
 
     scene.add(model);
 
@@ -369,10 +364,11 @@ gl.load('tour_ia.glb', g => {
 
     const finalBox = new THREE.Box3().setFromObject(model);
     const fc = finalBox.getCenter(new THREE.Vector3());
-    const fov = camera.fov * Math.PI / 180;
-    const dist = (targetH / 2) / Math.tan(fov / 2) * 1.1;
-    camera.position.set(0, fc.y, dist);
-    ctrl.target.set(0, fc.y * 0.95, 0);
+    const fh = finalBox.getSize(new THREE.Vector3()).y;
+    camera.position.set(0, fc.y, fh * 1.4);
+    ctrl.target.set(0, fc.y, 0);
+
+    console.log('Model loaded - size:', sz, 'scale:', s, 'finalHeight:', fh);
 
     $('loader').classList.add('hide');
     addMsg('Bonjour ! Je suis votre assistant. Posez-moi une question ou appuyez sur le micro pour parler.', 'a');
@@ -523,8 +519,11 @@ $('inp').onkeydown = e => { if (e.key === 'Enter') sendMsg($('inp').value); };
 
 /* ══════════════════ SALESFORCE BRIDGE ══════════════════ */
 
-/* ── Inject message into SF widget (hidden) ── */
-function injectIntoSF(text) {
+/* ── Inject message into SF widget (hidden) with retries ── */
+function injectIntoSF(text, attempt) {
+    attempt = attempt || 0;
+    if (attempt > 15) { sfLog('Input SF introuvable après 15 essais'); return; }
+
     try {
         const sfInp = deepQ(document.body,
             'textarea, input[type="text"], [contenteditable="true"]',
@@ -544,13 +543,18 @@ function injectIntoSF(text) {
                     btn.removeAttribute('disabled');
                     btn.click();
                     sfLog('Message envoyé');
+                } else {
+                    sfLog('Bouton send non trouvé, retry...');
+                    setTimeout(() => injectIntoSF(text, attempt + 1), 500);
                 }
             }, 300);
             return;
         }
-        sfLog('Input SF non trouvé');
+        sfLog('Input SF non trouvé, essai ' + (attempt + 1) + '...');
+        setTimeout(() => injectIntoSF(text, attempt + 1), 800);
     } catch(e) {
         sfLog('Erreur bridge: ' + e.message);
+        setTimeout(() => injectIntoSF(text, attempt + 1), 800);
     }
 }
 
