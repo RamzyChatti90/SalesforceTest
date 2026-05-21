@@ -943,8 +943,14 @@ gltfLoader.load('tour_ia.glb', g => {
     initRot = model.rotation.clone();
     initScale = model.scale.clone();
 
+    console.log('GLB loaded, meshBox size:', meshBox(model).getSize(new THREE.Vector3()));
+    console.log('Container size:', container.clientWidth, container.clientHeight);
+
     resizeRenderer();
     fitCamera(model, 1.3);
+
+    setTimeout(() => { resizeRenderer(); fitCamera(model, 1.3); }, 500);
+    setTimeout(() => { resizeRenderer(); fitCamera(model, 1.3); }, 2000);
 });
 
 /* ── Edit mode ── */
