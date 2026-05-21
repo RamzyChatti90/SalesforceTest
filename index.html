@@ -1020,14 +1020,14 @@ gltfLoader.load('robot_welder.glb', g => {
 
     scene.add(model);
 
+    model.position.set(0, 1.15, 0);
+    model.rotation.set(0, -0.04, 0);
+    model.scale.set(2.62, 2.62, 2.62);
+    camera.position.set(-0.08, 1.18, 0.27);
+
     resizeRenderer();
-    savedCenter = meshBox(model).getCenter(new THREE.Vector3());
-    const fitBox = meshBox(model).getSize(new THREE.Vector3());
-    const fitMax = Math.max(fitBox.x, fitBox.y, fitBox.z, 0.1);
-    const fovR = camera.fov * (Math.PI / 180);
-    savedDist = (fitMax / 2) / Math.tan(fovR / 2) * 1.3;
-    fitCamera(model, 1.3);
-    console.log('Camera saved at dist:', savedDist.toFixed(2), 'center:', savedCenter.x.toFixed(2), savedCenter.y.toFixed(2), savedCenter.z.toFixed(2));
+    savedCenter = new THREE.Vector3(0, 1.15, 0);
+    savedDist = 0.27;
 
     if (g.animations.length) {
         mixer = new THREE.AnimationMixer(gltfScene);
