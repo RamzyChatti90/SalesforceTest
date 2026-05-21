@@ -1033,14 +1033,14 @@ gltfLoader.load('robot_welder.glb', g => {
 
     scene.add(model);
 
-    model.position.set(-0.04, 1.05, 0);
-    model.rotation.set(0, -0.05, 0);
+    model.position.set(-0.06, 1.02, 0);
+    model.rotation.set(0, -0.01, 0);
     model.scale.set(2.07, 1.97, 2.62);
-    camera.position.set(-0.02, 1.09, 0.14);
+    camera.position.set(-0.04, 1.05, 0.14);
 
     resizeRenderer();
-    savedCamPos = new THREE.Vector3(-0.02, 1.09, 0.14);
-    savedCamTarget = new THREE.Vector3(-0.04, 1.05, 0);
+    savedCamPos = new THREE.Vector3(-0.04, 1.05, 0.14);
+    savedCamTarget = new THREE.Vector3(-0.06, 1.02, 0);
     ctrl.target.copy(savedCamTarget); ctrl.update();
 
     console.log('--- Animations (' + g.animations.length + ') ---');
