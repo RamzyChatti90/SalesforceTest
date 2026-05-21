@@ -951,12 +951,16 @@ dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5
 gltfLoader.setDRACOLoader(dracoLoader);
 
 gltfLoader.load('tour_ia.glb', g => {
-    model = g.scene;
-    model.traverse(child => { if (child.geometry) child.geometry.computeBoundingBox(); });
+    const gltfScene = g.scene;
+    gltfScene.traverse(child => { if (child.geometry) child.geometry.computeBoundingBox(); });
+
+    model = new THREE.Group();
+    model.add(gltfScene);
 
     let box = meshBox(model);
     const sz = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(sz.x, sz.y, sz.z, 0.001);
+    console.log('Raw meshBox size:', sz.x, sz.y, sz.z, '=> maxDim:', maxDim);
     model.scale.setScalar(3 / maxDim);
 
     box = meshBox(model);
@@ -968,7 +972,7 @@ gltfLoader.load('tour_ia.glb', g => {
     scene.add(model);
 
     if (g.animations.length) {
-        mixer = new THREE.AnimationMixer(model);
+        mixer = new THREE.AnimationMixer(gltfScene);
         g.animations.forEach(c => mixer.clipAction(c).play());
     }
 
@@ -977,7 +981,7 @@ gltfLoader.load('tour_ia.glb', g => {
     initScale = model.scale.clone();
     baseY = model.position.y;
 
-    model.traverse(child => {
+    gltfScene.traverse(child => {
         if (child.isMesh && child.morphTargetInfluences && child.morphTargetDictionary) {
             for (const [name, idx] of Object.entries(child.morphTargetDictionary)) {
                 if (/mouth|jaw|open|viseme/i.test(name))
@@ -986,9 +990,7 @@ gltfLoader.load('tour_ia.glb', g => {
         }
     });
 
-    console.log('GLB loaded, meshBox size:', meshBox(model).getSize(new THREE.Vector3()));
-    console.log('Container size:', container.clientWidth, container.clientHeight);
-    console.log('Mouth morphs found:', mouthMorphs.length);
+    console.log('Wrapper scale:', model.scale.x, '| Container:', container.clientWidth, container.clientHeight);
 
     resizeRenderer();
     fitCamera(model, 1.3);
