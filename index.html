@@ -1016,44 +1016,20 @@ gltfLoader.setDRACOLoader(dracoLoader);
 
 gltfLoader.load('robot_welder.glb', g => {
     const gltfScene = g.scene;
-    gltfScene.traverse(child => { if (child.geometry) child.geometry.computeBoundingBox(); });
 
     model = new THREE.Group();
     model.add(gltfScene);
-
-    console.log('--- Mesh analysis (before scale) ---');
-    let box = meshBox(model, true);
-    const sz = box.getSize(new THREE.Vector3());
-    const maxDim = Math.max(sz.x, sz.y, sz.z, 0.001);
-    console.log('Filtered meshBox:', sz.x.toFixed(2), sz.y.toFixed(2), sz.z.toFixed(2), '=> scale:', (3/maxDim).toFixed(4));
-    model.scale.setScalar(6 / maxDim);
-
-    box = meshBox(model);
-    const ctr = box.getCenter(new THREE.Vector3());
-    model.position.set(-ctr.x, -ctr.y, -ctr.z);
-    box = meshBox(model);
-    model.position.y -= box.min.y;
-
     scene.add(model);
 
     model.position.set(-0.08, 0.98, 0);
     model.rotation.set(0, -0.01, 0);
     model.scale.set(2.07, 1.97, 2.62);
     camera.position.set(-0.06, 1.02, 0.14);
-    console.log('CONFIG APPLIED - pos:', model.position.y, 'v2');
 
     resizeRenderer();
-    savedCamPos = new THREE.Vector3(-0.06, 1.02, 0.14);
-    savedCamTarget = new THREE.Vector3(-0.08, 0.98, 0);
+    savedCamPos = camera.position.clone();
+    savedCamTarget = model.position.clone();
     ctrl.target.copy(savedCamTarget); ctrl.update();
-
-    console.log('--- Animations (' + g.animations.length + ') ---');
-    g.animations.forEach((clip, i) => {
-        console.log('Clip ' + i + ':', clip.name, '| duration:', clip.duration.toFixed(2) + 's | tracks:', clip.tracks.length);
-        clip.tracks.forEach(track => {
-            console.log('  track:', track.name, '| type:', track.constructor.name, '| keys:', track.times.length);
-        });
-    });
 
     if (g.animations.length) {
         mixer = new THREE.AnimationMixer(gltfScene);
@@ -1095,7 +1071,6 @@ function toggleEdit() {
         ctrl.enableZoom = true;
         ctrl.enablePan = true;
         resizeRenderer();
-        fitCamera(model, 1.3);
         updatePanel();
     } else {
         tCtrl.detach();
