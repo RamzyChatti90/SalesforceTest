@@ -788,10 +788,13 @@ var sfLaunched = false;
 var ttsReady = false, frVoice = null;
 function loadVoices() {
     var voices = speechSynthesis.getVoices();
-    frVoice = voices.find(function(v){ return v.lang === 'fr-FR'; })
-           || voices.find(function(v){ return v.lang.startsWith('fr'); })
+    frVoice = voices.find(function(v){ return v.lang === 'fr-FR' && /male|homme|thomas|paul|henri/i.test(v.name); })
+           || voices.find(function(v){ return v.lang === 'fr-FR' && !/female|femme|féminin/i.test(v.name); })
+           || voices.find(function(v){ return v.lang.startsWith('fr') && !/female|femme|féminin/i.test(v.name); })
+           || voices.find(function(v){ return v.lang === 'fr-FR'; })
            || null;
     if (voices.length) ttsReady = true;
+    if (frVoice) console.log('TTS voice:', frVoice.name, frVoice.lang);
 }
 if ('speechSynthesis' in window) {
     loadVoices();
@@ -804,7 +807,7 @@ function speak(text) {
     var utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'fr-FR';
     utter.rate = 1;
-    utter.pitch = 1.05;
+    utter.pitch = 0.9;
     if (frVoice) utter.voice = frVoice;
     utter.onstart = function() { window.dispatchEvent(new Event('avatar-speak-start')); };
     utter.onend = function() { window.dispatchEvent(new Event('avatar-speak-stop')); };
