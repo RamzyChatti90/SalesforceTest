@@ -1042,6 +1042,14 @@ gltfLoader.load('robot_welder.glb', g => {
     savedCenter = new THREE.Vector3(-0.04, 1.07, 0);
     savedDist = 0.14;
 
+    console.log('--- Animations (' + g.animations.length + ') ---');
+    g.animations.forEach((clip, i) => {
+        console.log('Clip ' + i + ':', clip.name, '| duration:', clip.duration.toFixed(2) + 's | tracks:', clip.tracks.length);
+        clip.tracks.forEach(track => {
+            console.log('  track:', track.name, '| type:', track.constructor.name, '| keys:', track.times.length);
+        });
+    });
+
     if (g.animations.length) {
         mixer = new THREE.AnimationMixer(gltfScene);
         g.animations.forEach(clip => {
