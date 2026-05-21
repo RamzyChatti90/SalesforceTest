@@ -964,19 +964,47 @@ const grid = new THREE.GridHelper(10, 20, 0x333333, 0x1a1a1a);
 grid.visible = false;
 scene.add(grid);
 
-function meshBox(obj) {
+function meshBox(obj, debug) {
+    const infos = [];
+    obj.traverse(c => {
+        if (c.isMesh && c.visible && c.geometry) {
+            const wb = new THREE.Box3().setFromObject(c);
+            const sz = wb.getSize(new THREE.Vector3());
+            const dim = Math.max(sz.x, sz.y, sz.z);
+            infos.push({ m: c, dim, wb });
+            if (debug) console.log('  mesh:', c.name || '(unnamed)', 'dim:', dim.toFixed(2));
+        }
+    });
+    if (!infos.length) return new THREE.Box3().setFromObject(obj);
+    infos.sort((a, b) => a.dim - b.dim);
+    const med = infos[Math.floor(infos.length / 2)].dim;
     const b = new THREE.Box3();
-    obj.traverse(c => { if (c.isMesh && c.visible) b.expandByObject(c); });
-    if (b.isEmpty()) b.setFromObject(obj);
+    let kept = 0;
+    for (const i of infos) {
+        if (i.dim < med * 20 || infos.length <= 2) {
+            b.expandByObject(i.m); kept++;
+        } else if (debug) console.log('  SKIP outlier:', i.m.name, 'dim:', i.dim.toFixed(2));
+    }
+    if (b.isEmpty()) { for (const i of infos) b.expandByObject(i.m); }
+    if (debug) console.log('meshBox kept', kept, '/', infos.length);
     return b;
 }
 
+let savedCenter = null, savedDist = null;
+
 function fitCamera(object, offset) {
     offset = offset || 1.25;
-    const box = meshBox(object);
+    if (savedCenter && savedDist && !editMode) {
+        camera.position.set(savedCenter.x, savedCenter.y, savedCenter.z + savedDist);
+        camera.near = 0.01; camera.far = savedDist * 20;
+        camera.updateProjectionMatrix();
+        ctrl.target.copy(savedCenter); ctrl.update();
+        return;
+    }
+    const box = meshBox(object, editMode);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
+    const maxDim = Math.max(size.x, size.y, size.z, 0.1);
     const fov = camera.fov * (Math.PI / 180);
     let dist = (maxDim / 2) / Math.tan(fov / 2) * offset;
     camera.position.set(center.x, center.y, center.z + dist);
@@ -1005,10 +1033,11 @@ gltfLoader.load('tour_ia.glb', g => {
     model = new THREE.Group();
     model.add(gltfScene);
 
-    let box = meshBox(model);
+    console.log('--- Mesh analysis (before scale) ---');
+    let box = meshBox(model, true);
     const sz = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(sz.x, sz.y, sz.z, 0.001);
-    console.log('Raw meshBox size:', sz.x, sz.y, sz.z, '=> maxDim:', maxDim);
+    console.log('Filtered meshBox:', sz.x.toFixed(2), sz.y.toFixed(2), sz.z.toFixed(2), '=> scale:', (3/maxDim).toFixed(4));
     model.scale.setScalar(3 / maxDim);
 
     box = meshBox(model);
@@ -1018,6 +1047,15 @@ gltfLoader.load('tour_ia.glb', g => {
     model.position.y -= box.min.y;
 
     scene.add(model);
+
+    resizeRenderer();
+    savedCenter = meshBox(model).getCenter(new THREE.Vector3());
+    const fitBox = meshBox(model).getSize(new THREE.Vector3());
+    const fitMax = Math.max(fitBox.x, fitBox.y, fitBox.z, 0.1);
+    const fovR = camera.fov * (Math.PI / 180);
+    savedDist = (fitMax / 2) / Math.tan(fovR / 2) * 1.3;
+    fitCamera(model, 1.3);
+    console.log('Camera saved at dist:', savedDist.toFixed(2), 'center:', savedCenter.x.toFixed(2), savedCenter.y.toFixed(2), savedCenter.z.toFixed(2));
 
     if (g.animations.length) {
         mixer = new THREE.AnimationMixer(gltfScene);
@@ -1038,13 +1076,7 @@ gltfLoader.load('tour_ia.glb', g => {
         }
     });
 
-    console.log('Wrapper scale:', model.scale.x, '| Container:', container.clientWidth, container.clientHeight);
-
-    resizeRenderer();
-    fitCamera(model, 1.3);
-
     setTimeout(() => { resizeRenderer(); fitCamera(model, 1.3); }, 500);
-    setTimeout(() => { resizeRenderer(); fitCamera(model, 1.3); }, 2000);
 });
 
 /* ── Edit mode ── */
