@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent IA - Assistant Interactif</title>
+    <title>Agent IA - Demo Interactive</title>
 
+    <!-- Intercept WebSocket avant le chargement SF pour capter les réponses agent -->
     <script>
     (function() {
-        var _WS = window.WebSocket;
-        window.WebSocket = function(url, protocols) {
-            var ws = protocols ? new _WS(url, protocols) : new _WS(url);
-            ws.addEventListener('message', function(evt) {
+        var _WS = WebSocket;
+        window.WebSocket = function(u, p) {
+            var ws = p ? new _WS(u, p) : new _WS(u);
+            ws.addEventListener('message', function(e) {
                 try {
-                    if (typeof evt.data === 'string') {
-                        var data = JSON.parse(evt.data);
-                        window.dispatchEvent(new CustomEvent('sf-ws-msg', { detail: data }));
+                    if (typeof e.data === 'string') {
+                        window.dispatchEvent(new CustomEvent('sf-ws', { detail: JSON.parse(e.data) }));
                     }
-                } catch(e) {}
+                } catch(x) {}
             });
             return ws;
         };
@@ -30,138 +30,143 @@
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         :root {
-            --cyan: #00d4ff;
-            --purple: #8b5cf6;
-            --dark: #0a0e1a;
-            --darker: #060810;
-            --glass: rgba(255,255,255,0.06);
-            --glass-border: rgba(255,255,255,0.1);
-            --text: #ffffff;
+            --cyan: #00d4ff; --purple: #8b5cf6;
+            --dark: #0a0e1a; --darker: #060810;
+            --glass: rgba(255,255,255,.06);
+            --border: rgba(255,255,255,.1);
             --dim: #8890a8;
         }
-
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-family: 'Segoe UI', system-ui, sans-serif;
             background: linear-gradient(160deg, var(--darker), var(--dark), #0d1425);
-            color: var(--text);
-            overflow: hidden;
-            height: 100vh;
+            color: #fff; overflow: hidden; height: 100vh;
+        }
+
+        /* ── Masquer entièrement le widget Salesforce ── */
+        .embeddedMessagingConversationButtonWrapper,
+        .embeddedMessagingFrame,
+        .embedded-messaging,
+        [class*="embeddedMessaging"],
+        [id*="embeddedMessaging"],
+        iframe[name*="ESW"],
+        div[data-embedded-messaging] {
+            position: fixed !important;
+            left: -9999px !important;
+            top: -9999px !important;
+            width: 1px !important;
+            height: 1px !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            overflow: hidden !important;
+            z-index: -1 !important;
         }
 
         /* ── Loader ── */
         #loader {
-            position: fixed; inset: 0;
-            background: var(--darker);
+            position: fixed; inset: 0; background: var(--darker);
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
             z-index: 9999; transition: opacity .6s;
         }
-        #loader.hidden { opacity: 0; pointer-events: none; }
-        .spinner {
+        #loader.hide { opacity: 0; pointer-events: none; }
+        .spin {
             width: 48px; height: 48px;
-            border: 3px solid var(--glass-border);
+            border: 3px solid var(--border);
             border-top-color: var(--cyan);
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: sp 1s linear infinite;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes sp { to { transform: rotate(360deg); } }
         #loader p { margin-top: 14px; color: var(--dim); font-size: 13px; }
 
         /* ── Header ── */
-        #header {
+        #hdr {
             position: fixed; top: 0; left: 0; right: 0; height: 50px;
             display: flex; align-items: center; justify-content: space-between;
             padding: 0 24px;
-            background: rgba(6,8,16,.75);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--glass-border);
-            z-index: 100;
+            background: rgba(6,8,16,.75); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border); z-index: 100;
         }
-        .status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); }
-        .dot {
+        .st { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); }
+        .dt {
             width: 8px; height: 8px; border-radius: 50%;
             background: #ef4444; transition: all .3s;
         }
-        .dot.on { background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,.5); }
+        .dt.on { background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,.5); }
         .brand {
-            font-size: 17px; font-weight: 700; letter-spacing: .4px;
+            font-size: 17px; font-weight: 700;
             background: linear-gradient(90deg, var(--cyan), var(--purple));
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
-        /* ── 3D viewport ── */
-        #viewport { position: fixed; inset: 0; z-index: 1; }
-        #viewport canvas { display: block; }
+        /* ── Viewport 3D ── */
+        #vp { position: fixed; inset: 0; z-index: 1; }
+        #vp canvas { display: block; }
 
-        /* ── Glow ── */
-        #glow {
-            position: fixed; top: 38%; left: 50%;
+        /* ── Halo ── */
+        #halo {
+            position: fixed; top: 35%; left: 50%;
             transform: translate(-50%,-50%);
-            width: 320px; height: 320px; border-radius: 50%;
-            background: radial-gradient(circle, rgba(0,212,255,.08), transparent 70%);
+            width: 350px; height: 350px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,212,255,.1), transparent 70%);
             pointer-events: none; z-index: 2; transition: all .5s;
         }
-        #glow.speaking {
-            width: 480px; height: 480px;
-            background: radial-gradient(circle, rgba(0,212,255,.22), rgba(139,92,246,.08) 50%, transparent 70%);
-            animation: gPulse 1.4s ease-in-out infinite;
+        #halo.speak {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(0,212,255,.25), rgba(139,92,246,.08) 50%, transparent 70%);
+            animation: hp 1.4s ease-in-out infinite;
         }
-        #glow.listening {
-            background: radial-gradient(circle, rgba(139,92,246,.16), transparent 70%);
-            animation: gPulse 2s ease-in-out infinite;
+        #halo.listen {
+            background: radial-gradient(circle, rgba(139,92,246,.18), transparent 70%);
+            animation: hp 2s ease-in-out infinite;
         }
-        @keyframes gPulse {
+        @keyframes hp {
             0%,100% { transform: translate(-50%,-50%) scale(1); }
-            50%     { transform: translate(-50%,-50%) scale(1.07); }
+            50%     { transform: translate(-50%,-50%) scale(1.08); }
         }
 
         /* ── Chat ── */
         #chat {
-            position: fixed; bottom: 92px; left: 50%; transform: translateX(-50%);
-            width: 94%; max-width: 700px; max-height: 46vh;
+            position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+            width: 94%; max-width: 700px; max-height: 44vh;
             overflow-y: auto; padding: 10px;
             display: flex; flex-direction: column; gap: 6px;
             z-index: 10; scrollbar-width: none;
         }
         #chat::-webkit-scrollbar { display: none; }
-
         .msg {
             padding: 10px 16px; border-radius: 14px;
-            font-size: 14px; line-height: 1.55;
-            max-width: 82%; animation: msgIn .3s ease;
-            word-wrap: break-word;
+            font-size: 14px; line-height: 1.55; max-width: 82%;
+            animation: mi .3s ease; word-wrap: break-word;
         }
-        .msg.agent {
+        .msg.a {
             background: var(--glass); backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border); align-self: flex-start;
+            border: 1px solid var(--border); align-self: flex-start;
         }
-        .msg.user {
+        .msg.u {
             background: linear-gradient(135deg, rgba(0,212,255,.12), rgba(139,92,246,.12));
             border: 1px solid rgba(0,212,255,.15); align-self: flex-end;
         }
-        .msg .lbl {
+        .msg .lb {
             font-size: 10px; text-transform: uppercase;
-            letter-spacing: 1.2px; font-weight: 700;
-            margin-bottom: 2px; color: var(--cyan);
+            letter-spacing: 1.2px; font-weight: 700; margin-bottom: 2px;
         }
-        .msg.user .lbl { color: var(--purple); }
-
-        @keyframes msgIn {
+        .msg.a .lb { color: var(--cyan); }
+        .msg.u .lb { color: var(--purple); }
+        @keyframes mi {
             from { opacity: 0; transform: translateY(8px); }
             to   { opacity: 1; transform: translateY(0); }
         }
-
         .dots { display: flex; gap: 5px; padding: 4px 0; }
         .dots span {
             width: 7px; height: 7px; border-radius: 50%;
             background: var(--cyan); opacity: .6;
-            animation: dotB 1.4s infinite ease-in-out;
+            animation: db 1.4s infinite ease-in-out;
         }
         .dots span:nth-child(2) { animation-delay: .2s; }
         .dots span:nth-child(3) { animation-delay: .4s; }
-        @keyframes dotB {
+        @keyframes db {
             0%,80%,100% { transform: scale(.6); }
             40%          { transform: scale(1); }
         }
@@ -173,16 +178,14 @@
             display: flex; align-items: center; gap: 8px;
             padding: 6px 6px 6px 20px;
             background: var(--glass); backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border); border-radius: 50px;
-            z-index: 10;
+            border: 1px solid var(--border); border-radius: 50px; z-index: 10;
         }
         #bar input {
             flex: 1; border: none; background: none;
-            color: var(--text); font-size: 14px; padding: 10px 0;
+            color: #fff; font-size: 14px; padding: 10px 0;
             outline: none; font-family: inherit;
         }
         #bar input::placeholder { color: var(--dim); }
-
         .cb {
             width: 44px; height: 44px; border-radius: 50%; border: none;
             display: flex; align-items: center; justify-content: center;
@@ -195,69 +198,66 @@
         #mic:hover { transform: scale(1.08); box-shadow: 0 0 20px rgba(0,212,255,.3); }
         #mic.on {
             background: linear-gradient(135deg, #ef4444, var(--purple));
-            animation: mPulse 1.5s infinite;
+            animation: mp 1.5s infinite;
         }
-        @keyframes mPulse {
+        @keyframes mp {
             0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.4); }
             50%      { box-shadow: 0 0 0 14px rgba(239,68,68,0); }
         }
-        #send {
-            background: rgba(255,255,255,.08); color: var(--cyan);
-        }
-        #send:hover { background: rgba(0,212,255,.15); }
+        #snd { background: rgba(255,255,255,.08); color: var(--cyan); }
+        #snd:hover { background: rgba(0,212,255,.15); }
 
-        /* ── Listening label ── */
-        #lisTxt {
+        #lis {
             position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%);
             font-size: 12px; color: var(--cyan); z-index: 10;
             opacity: 0; transition: opacity .3s;
             display: flex; align-items: center; gap: 6px;
         }
-        #lisTxt.on { opacity: 1; }
-        .wave { display: flex; gap: 2px; align-items: center; }
-        .wave span {
+        #lis.on { opacity: 1; }
+        .wv { display: flex; gap: 2px; align-items: center; }
+        .wv span {
             width: 3px; border-radius: 2px; background: var(--cyan);
-            animation: waveAni .8s ease-in-out infinite;
+            animation: wva .8s ease-in-out infinite;
         }
-        .wave span:nth-child(1) { height: 8px; animation-delay: 0s; }
-        .wave span:nth-child(2) { height: 14px; animation-delay: .15s; }
-        .wave span:nth-child(3) { height: 10px; animation-delay: .3s; }
-        .wave span:nth-child(4) { height: 16px; animation-delay: .45s; }
-        .wave span:nth-child(5) { height: 8px; animation-delay: .6s; }
-        @keyframes waveAni {
+        .wv span:nth-child(1) { height: 8px; }
+        .wv span:nth-child(2) { height: 14px; animation-delay: .15s; }
+        .wv span:nth-child(3) { height: 10px; animation-delay: .3s; }
+        .wv span:nth-child(4) { height: 16px; animation-delay: .45s; }
+        .wv span:nth-child(5) { height: 8px; animation-delay: .6s; }
+        @keyframes wva {
             0%,100% { height: 4px; }
             50%      { height: 18px; }
         }
 
-        /* ── SF widget adjustments ── */
-        .embedded-messaging,
-        [class*="embeddedMessaging"] {
-            z-index: 50 !important;
+        /* ── SF status ── */
+        #sf-status {
+            position: fixed; top: 54px; right: 12px;
+            font-size: 10px; color: var(--dim);
+            background: rgba(0,0,0,.5); padding: 4px 10px;
+            border-radius: 8px; z-index: 100;
+            opacity: 0.6;
         }
     </style>
 </head>
 <body>
 
-<div id="loader">
-    <div class="spinner"></div>
-    <p>Chargement de l'avatar...</p>
-</div>
+<div id="loader"><div class="spin"></div><p>Chargement de l'avatar...</p></div>
 
-<header id="header">
-    <div class="status">
-        <span class="dot" id="dot"></span>
+<header id="hdr">
+    <div class="st">
+        <span class="dt" id="dot"></span>
         <span id="stxt">Connexion...</span>
     </div>
     <span class="brand">Assistant IA</span>
     <div style="width:100px"></div>
 </header>
 
-<div id="viewport"></div>
-<div id="glow"></div>
+<div id="vp"></div>
+<div id="halo"></div>
 <div id="chat"></div>
 
-<div id="lisTxt">
-    <div class="wave"><span></span><span></span><span></span><span></span><span></span></div>
+<div id="lis">
+    <div class="wv"><span></span><span></span><span></span><span></span><span></span></div>
     &Eacute;coute en cours...
 </div>
 
@@ -271,14 +271,15 @@
             <line x1="8" y1="23" x2="16" y2="23"/>
         </svg>
     </button>
-    <button class="cb" id="send" title="Envoyer">
+    <button class="cb" id="snd" title="Envoyer">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
         </svg>
     </button>
 </div>
 
-<!-- ── Three.js ── -->
+<div id="sf-status">SF: en attente...</div>
+
 <script type="importmap">
 {
     "imports": {
@@ -295,29 +296,19 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const $ = id => document.getElementById(id);
-const loaderEl = $('loader');
-const chatEl   = $('chat');
-const inp      = $('inp');
-const micBtn   = $('mic');
-const sendBtn  = $('send');
-const glowEl   = $('glow');
-const dotEl    = $('dot');
-const stxtEl   = $('stxt');
-const lisEl    = $('lisTxt');
-const viewport = $('viewport');
 
-/* ══════ Three.js ══════ */
-const scene    = new THREE.Scene();
-const camera   = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(0, 1.5, 4);
+/* ══════════════════ THREE.JS ══════════════════ */
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(0, 1.5, 5);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.3;
-viewport.appendChild(renderer.domElement);
+renderer.toneMappingExposure = 1.4;
+$('vp').appendChild(renderer.domElement);
 
 const ctrl = new OrbitControls(camera, renderer.domElement);
 ctrl.enableDamping = true;
@@ -328,45 +319,47 @@ ctrl.target.set(0, 1, 0);
 ctrl.minPolarAngle = Math.PI / 4;
 ctrl.maxPolarAngle = Math.PI / 1.7;
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-const kl = new THREE.DirectionalLight(0xffffff, 1.2);
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const kl = new THREE.DirectionalLight(0xffffff, 1.5);
 kl.position.set(3, 5, 4); scene.add(kl);
-const fl = new THREE.DirectionalLight(0x00d4ff, 0.35);
-fl.position.set(-4, 2, -3); scene.add(fl);
-const rl = new THREE.DirectionalLight(0x8b5cf6, 0.5);
-rl.position.set(0, 4, -5); scene.add(rl);
+const fl2 = new THREE.DirectionalLight(0x00d4ff, 0.4);
+fl2.position.set(-4, 2, -3); scene.add(fl2);
+const rl2 = new THREE.DirectionalLight(0x8b5cf6, 0.5);
+rl2.position.set(0, 4, -5); scene.add(rl2);
 
-const PN = 250;
-const pGeo = new THREE.BufferGeometry();
-const pPos = new Float32Array(PN * 3);
-for (let i = 0; i < PN * 3; i++) pPos[i] = (Math.random() - .5) * 14;
-pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-const pMat = new THREE.PointsMaterial({ color: 0x00d4ff, size: 0.02, transparent: true, opacity: 0.3 });
-const pts  = new THREE.Points(pGeo, pMat);
+const PN = 200;
+const pG = new THREE.BufferGeometry();
+const pP = new Float32Array(PN * 3);
+for (let i = 0; i < PN * 3; i++) pP[i] = (Math.random() - .5) * 16;
+pG.setAttribute('position', new THREE.BufferAttribute(pP, 3));
+const pM = new THREE.PointsMaterial({ color: 0x00d4ff, size: 0.02, transparent: true, opacity: 0.25 });
+const pts = new THREE.Points(pG, pM);
 scene.add(pts);
 
-const rGeo = new THREE.RingGeometry(0.6, 1, 64);
-const rMat = new THREE.MeshBasicMaterial({ color: 0x00d4ff, transparent: true, opacity: 0.07, side: THREE.DoubleSide });
-const ring = new THREE.Mesh(rGeo, rMat);
-ring.rotation.x = -Math.PI / 2;
-ring.position.y = 0.01;
-scene.add(ring);
-
-/* ── Load model ── */
+/* ── Load GLB ── */
 let model = null, mixer = null;
-const gltf = new GLTFLoader();
-const draco = new DRACOLoader();
-draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
-gltf.setDRACOLoader(draco);
+const gl = new GLTFLoader();
+const dr = new DRACOLoader();
+dr.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+gl.setDRACOLoader(dr);
 
-gltf.load('tour_ia.glb', g => {
+gl.load('tour_ia.glb', g => {
     model = g.scene;
+
     const box = new THREE.Box3().setFromObject(model);
     const sz  = box.getSize(new THREE.Vector3());
     const ctr = box.getCenter(new THREE.Vector3());
-    const s   = 2.5 / Math.max(sz.x, sz.y, sz.z);
+
+    const targetH = 3.5;
+    const s = targetH / Math.max(sz.y, 0.01);
     model.scale.setScalar(s);
-    model.position.sub(ctr.multiplyScalar(s));
+
+    box.setFromObject(model);
+    const nc = box.getCenter(new THREE.Vector3());
+    model.position.x -= nc.x;
+    model.position.y -= box.min.y;
+    model.position.z -= nc.z;
+
     scene.add(model);
 
     if (g.animations.length) {
@@ -374,21 +367,24 @@ gltf.load('tour_ia.glb', g => {
         g.animations.forEach(c => mixer.clipAction(c).play());
     }
 
-    const b2 = new THREE.Box3().setFromObject(model);
-    const c2 = b2.getCenter(new THREE.Vector3());
-    ctrl.target.copy(c2);
-    camera.position.set(c2.x, c2.y + 0.3, c2.z + 3);
+    const finalBox = new THREE.Box3().setFromObject(model);
+    const fc = finalBox.getCenter(new THREE.Vector3());
+    const fov = camera.fov * Math.PI / 180;
+    const dist = (targetH / 2) / Math.tan(fov / 2) * 1.1;
+    camera.position.set(0, fc.y, dist);
+    ctrl.target.set(0, fc.y * 0.95, 0);
 
-    loaderEl.classList.add('hidden');
-    addMsg('Bonjour ! Je suis votre assistant IA. Posez-moi une question ou appuyez sur le micro pour parler.', 'agent');
-    setStatus(true);
+    $('loader').classList.add('hide');
+    addMsg('Bonjour ! Je suis votre assistant. Posez-moi une question ou appuyez sur le micro pour parler.', 'a');
+    $('dot').classList.add('on');
+    $('stxt').textContent = 'Connecté';
 
 }, xhr => {
-    if (xhr.total) loaderEl.querySelector('p').textContent =
+    if (xhr.total) $('loader').querySelector('p').textContent =
         'Chargement... ' + Math.round(xhr.loaded / xhr.total * 100) + '%';
 }, err => {
     console.error('GLB error:', err);
-    loaderEl.querySelector('p').textContent = 'Erreur de chargement du modèle';
+    $('loader').querySelector('p').textContent = 'Erreur chargement modèle';
 });
 
 /* ── Animate ── */
@@ -397,27 +393,20 @@ let t = 0, speaking = false, listening = false;
 
 (function loop() {
     requestAnimationFrame(loop);
-    const dt = clock.getDelta();
-    t += dt;
+    const dt = clock.getDelta(); t += dt;
     if (mixer) mixer.update(dt);
-
     if (model) {
         if (speaking) {
-            model.position.y += Math.sin(t * 5) * 0.002;
-            model.rotation.y = Math.sin(t * 2) * 0.03;
+            model.position.y += Math.sin(t * 5) * 0.003;
+            model.rotation.y = Math.sin(t * 2) * 0.04;
         } else if (listening) {
-            model.rotation.x = -0.03 + Math.sin(t * 2) * 0.01;
+            model.rotation.x = -0.04 + Math.sin(t * 2) * 0.015;
         } else {
-            model.position.y += Math.sin(t * 1.2) * 0.0007;
-            model.rotation.y = Math.sin(t * 0.4) * 0.04;
+            model.position.y += Math.sin(t * 1.2) * 0.001;
+            model.rotation.y = Math.sin(t * 0.4) * 0.05;
         }
     }
-
     pts.rotation.y += 0.0003;
-    ring.material.opacity = speaking
-        ? 0.12 + Math.sin(t * 4) * 0.08
-        : 0.05 + Math.sin(t * 2) * 0.02;
-
     ctrl.update();
     renderer.render(scene, camera);
 })();
@@ -428,30 +417,33 @@ addEventListener('resize', () => {
     renderer.setSize(innerWidth, innerHeight);
 });
 
-/* ══════ Chat ══════ */
+/* ══════════════════ CHAT UI ══════════════════ */
+const chatEl = $('chat');
+const shown = new Set();
+
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
 function addMsg(text, who) {
+    shown.add(text);
     const d = document.createElement('div');
     d.className = 'msg ' + who;
-    d.innerHTML = '<div class="lbl">' + (who === 'agent' ? 'Agent IA' : 'Vous') + '</div><div>' + esc(text) + '</div>';
+    d.innerHTML = '<div class="lb">' + (who === 'a' ? 'Agent IA' : 'Vous') + '</div><div>' + esc(text) + '</div>';
     chatEl.appendChild(d);
     chatEl.scrollTop = chatEl.scrollHeight;
-    if (who === 'agent') speak(text);
+    if (who === 'a') ttsSpeak(text);
 }
 
 function showDots() {
-    if ($('typing')) return;
+    if ($('typ')) return;
     const d = document.createElement('div');
-    d.className = 'msg agent'; d.id = 'typing';
+    d.className = 'msg a'; d.id = 'typ';
     d.innerHTML = '<div class="dots"><span></span><span></span><span></span></div>';
     chatEl.appendChild(d);
     chatEl.scrollTop = chatEl.scrollHeight;
 }
+function hideDots() { $('typ')?.remove(); }
 
-function hideDots() { $('typing')?.remove(); }
-
-/* ══════ Voice Recognition ══════ */
+/* ══════════════════ VOICE ══════════════════ */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null;
 
@@ -460,197 +452,258 @@ if (SR) {
     rec.lang = 'fr-FR';
     rec.continuous = false;
     rec.interimResults = true;
-
     rec.onstart = () => {
         listening = true;
-        micBtn.classList.add('on');
-        lisEl.classList.add('on');
-        glowEl.classList.add('listening');
+        $('mic').classList.add('on');
+        $('lis').classList.add('on');
+        $('halo').classList.add('listen');
     };
     rec.onresult = e => {
         let txt = '';
         for (let i = e.resultIndex; i < e.results.length; i++) txt += e.results[i][0].transcript;
-        inp.value = txt;
-        if (e.results[e.results.length - 1].isFinal) send(txt);
+        $('inp').value = txt;
+        if (e.results[e.results.length - 1].isFinal) sendMsg(txt);
     };
     rec.onend = () => {
         listening = false;
-        micBtn.classList.remove('on');
-        lisEl.classList.remove('on');
-        glowEl.classList.remove('listening');
+        $('mic').classList.remove('on');
+        $('lis').classList.remove('on');
+        $('halo').classList.remove('listen');
     };
     rec.onerror = () => {
         listening = false;
-        micBtn.classList.remove('on');
-        lisEl.classList.remove('on');
-        glowEl.classList.remove('listening');
+        $('mic').classList.remove('on');
+        $('lis').classList.remove('on');
+        $('halo').classList.remove('listen');
     };
 }
 
-/* ══════ TTS ══════ */
 const synth = window.speechSynthesis;
-let frVoice = null;
+let frV = null;
 
-function pickVoice() {
+function pickV() {
     const v = synth.getVoices();
-    frVoice = v.find(x => x.lang.startsWith('fr') && /google|microsoft/i.test(x.name))
-           || v.find(x => x.lang.startsWith('fr'))
-           || v[0] || null;
+    frV = v.find(x => x.lang.startsWith('fr') && /google|microsoft/i.test(x.name))
+       || v.find(x => x.lang.startsWith('fr'))
+       || v[0] || null;
 }
-synth.onvoiceschanged = pickVoice;
-pickVoice();
+synth.onvoiceschanged = pickV;
+pickV();
 
-function speak(text) {
+function ttsSpeak(text) {
     synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang  = 'fr-FR';
-    u.rate  = 1;
-    u.pitch = 1;
-    if (frVoice) u.voice = frVoice;
-
-    u.onstart = () => { speaking = true;  glowEl.classList.add('speaking'); };
-    u.onend   = () => { speaking = false; glowEl.classList.remove('speaking'); };
-    u.onerror = () => { speaking = false; glowEl.classList.remove('speaking'); };
-
+    u.lang = 'fr-FR'; u.rate = 1; u.pitch = 1;
+    if (frV) u.voice = frV;
+    u.onstart = () => { speaking = true;  $('halo').classList.add('speak'); };
+    u.onend   = () => { speaking = false; $('halo').classList.remove('speak'); };
+    u.onerror = () => { speaking = false; $('halo').classList.remove('speak'); };
     synth.speak(u);
 }
 
-/* ══════ Send message ══════ */
+/* ══════════════════ SEND ══════════════════ */
 const sent = new Set();
 
-function send(text) {
+function sendMsg(text) {
     text = (text || '').trim();
     if (!text) return;
-    inp.value = '';
+    $('inp').value = '';
     sent.add(text);
-    addMsg(text, 'user');
+    addMsg(text, 'u');
     showDots();
-    bridgeSF(text);
+    injectIntoSF(text);
 }
 
-/* ══════ Salesforce bridge ══════ */
-function bridgeSF(text) {
+$('mic').onclick = () => {
+    if (!rec) { addMsg('La reconnaissance vocale nécessite Google Chrome.', 'a'); return; }
+    listening ? rec.stop() : rec.start();
+};
+$('snd').onclick = () => sendMsg($('inp').value);
+$('inp').onkeydown = e => { if (e.key === 'Enter') sendMsg($('inp').value); };
+
+/* ══════════════════ SALESFORCE BRIDGE ══════════════════ */
+
+/* ── Inject message into SF widget (hidden) ── */
+function injectIntoSF(text) {
     try {
-        const sfInp = deepFind(document.body,
+        const sfInp = deepQ(document.body,
             'textarea, input[type="text"], [contenteditable="true"]',
-            el => {
-                let p = el;
-                while (p) {
-                    if (p.className && typeof p.className === 'string' &&
-                        (/embedded/i.test(p.className) || /messaging/i.test(p.className))) return true;
-                    p = p.parentElement;
-                }
-                return false;
-            });
+            el => isSFElement(el));
 
         if (sfInp) {
-            const set = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set
-                     || Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-            if (set) {
-                set.call(sfInp, text);
-                sfInp.dispatchEvent(new Event('input',  { bubbles: true }));
-                sfInp.dispatchEvent(new Event('change', { bubbles: true }));
-            } else {
-                sfInp.value = text;
-            }
+            setNativeValue(sfInp, text);
+            sfInp.dispatchEvent(new Event('input', { bubbles: true }));
+            sfInp.dispatchEvent(new Event('change', { bubbles: true }));
+            sfInp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
 
             setTimeout(() => {
-                const btn = deepFind(document.body,
-                    'button[class*="send"], button[aria-label*="Send"], button[aria-label*="Envoyer"], button[title*="Send"]');
-                if (btn) btn.click();
-            }, 250);
+                const btn = deepQ(document.body,
+                    'button[class*="send"], button[class*="Send"], button[aria-label*="Send"], button[aria-label*="Envoyer"], button[title*="Send"]',
+                    el => isSFElement(el));
+                if (btn) {
+                    btn.removeAttribute('disabled');
+                    btn.click();
+                    sfLog('Message envoyé');
+                }
+            }, 300);
             return;
         }
-    } catch(e) { console.log('SF bridge err:', e); }
+        sfLog('Input SF non trouvé');
+    } catch(e) {
+        sfLog('Erreur bridge: ' + e.message);
+    }
 }
 
-function deepFind(root, sel, filter) {
+function setNativeValue(el, val) {
+    const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement : HTMLInputElement;
+    const setter = Object.getOwnPropertyDescriptor(proto.prototype, 'value')?.set;
+    if (setter) setter.call(el, val);
+    else el.value = val;
+}
+
+function isSFElement(el) {
+    let p = el;
+    while (p) {
+        const cn = typeof p.className === 'string' ? p.className : '';
+        const id = p.id || '';
+        if (/embedded|messaging|esw/i.test(cn + id)) return true;
+        if (p.host) return true;
+        p = p.parentElement || p.parentNode;
+    }
+    return false;
+}
+
+function deepQ(root, sel, filter) {
+    if (!root || !root.querySelectorAll) return null;
     for (const el of root.querySelectorAll(sel)) {
         if (!filter || filter(el)) return el;
     }
     for (const el of root.querySelectorAll('*')) {
         if (el.shadowRoot) {
-            const r = deepFind(el.shadowRoot, sel, filter);
+            const r = deepQ(el.shadowRoot, sel, filter);
             if (r) return r;
         }
     }
     return null;
 }
 
-/* ══════ Detect agent replies via WebSocket ══════ */
-const seen = new Set();
-
-window.addEventListener('sf-ws-msg', e => {
-    const text = extractText(e.detail);
-    if (text && !seen.has(text) && !sent.has(text)) {
-        seen.add(text);
+/* ── Detect agent responses: WebSocket intercept ── */
+window.addEventListener('sf-ws', e => {
+    const txt = extractWSText(e.detail);
+    if (txt && !shown.has(txt) && !sent.has(txt) && txt.length > 5) {
+        shown.add(txt);
         hideDots();
-        addMsg(text, 'agent');
+        addMsg(txt, 'a');
+        sfLog('Réponse via WS');
     }
 });
 
-function extractText(d) {
+function extractWSText(d) {
     if (!d) return null;
     try {
         if (d.payload?.abstractMessage?.staticContent?.text)
             return d.payload.abstractMessage.staticContent.text;
-        if (d.payload?.text && d.payload?.sender?.role !== 'EndUser')
+        if (d.payload?.text && d.payload?.sender?.role !== 'EndUser' && d.payload?.sender?.role !== 'Customer')
             return d.payload.text;
         if (d.payload?.entries) {
-            for (const entry of d.payload.entries) {
-                if (entry.entryType === 'Message' && entry.sender?.role !== 'EndUser') {
-                    const content = entry.messageContent || entry.abstractMessage?.staticContent;
-                    if (content?.text) return content.text;
+            for (const e of d.payload.entries) {
+                if (e.sender?.role === 'EndUser' || e.sender?.role === 'Customer') continue;
+                const c = e.messageContent || e.abstractMessage?.staticContent;
+                if (c?.text) return c.text;
+                if (e.entryPayload) {
+                    try {
+                        const ep = JSON.parse(e.entryPayload);
+                        if (ep.abstractMessage?.staticContent?.text) return ep.abstractMessage.staticContent.text;
+                    } catch {}
                 }
             }
         }
-        if (d.type === 'CONVERSATION_MESSAGE' && d.message?.content)
-            return d.message.content;
+        if (d.payload?.conversationEntry?.entryPayload) {
+            try {
+                const ep = JSON.parse(d.payload.conversationEntry.entryPayload);
+                const role = d.payload.conversationEntry?.sender?.role;
+                if (role !== 'EndUser' && role !== 'Customer' && ep.abstractMessage?.staticContent?.text)
+                    return ep.abstractMessage.staticContent.text;
+            } catch {}
+        }
     } catch {}
     return null;
 }
 
-/* ── DOM observer fallback ── */
-let lastDetected = '';
-const obs = new MutationObserver(muts => {
-    for (const m of muts) {
-        for (const n of m.addedNodes) {
-            if (n.nodeType !== 1) continue;
-            const cl = n.className || '';
-            if (typeof cl === 'string' && (/message/i.test(cl) || /chat/i.test(cl))) {
-                const txt = n.textContent?.trim();
-                if (txt && txt.length > 3 && txt !== lastDetected && !sent.has(txt)) {
-                    const isOut = /outbound|user|customer|enduser/i.test(cl);
-                    if (!isOut) {
-                        lastDetected = txt;
-                        hideDots();
-                        if (!seen.has(txt)) {
-                            seen.add(txt);
-                            addMsg(txt, 'agent');
-                        }
-                    }
-                }
-            }
+/* ── Detect agent responses: DOM polling (fallback) ── */
+let lastPoll = '';
+
+setInterval(() => {
+    const texts = [];
+    collectSFTexts(document.body, texts);
+
+    for (const txt of texts) {
+        if (txt.length > 8 && !shown.has(txt) && !sent.has(txt) && txt !== lastPoll) {
+            if (/rejoint|joined|left|quitté|aujourd'hui|AM|PM/i.test(txt) && txt.length < 60) continue;
+            lastPoll = txt;
+            shown.add(txt);
+            hideDots();
+            addMsg(txt, 'a');
+            sfLog('Réponse via DOM');
         }
     }
-});
-obs.observe(document.body, { childList: true, subtree: true });
+}, 800);
 
-/* ══════ Events ══════ */
-micBtn.onclick = () => {
-    if (!rec) { addMsg('La reconnaissance vocale nécessite Google Chrome.', 'agent'); return; }
-    listening ? rec.stop() : rec.start();
-};
-sendBtn.onclick = () => send(inp.value);
-inp.onkeydown  = e => { if (e.key === 'Enter') send(inp.value); };
+function collectSFTexts(root, results) {
+    if (!root || !root.querySelectorAll) return;
+    for (const el of root.querySelectorAll('*')) {
+        const cn = typeof el.className === 'string' ? el.className : '';
+        const role = el.getAttribute?.('role') || '';
 
-function setStatus(on) {
-    dotEl.className = on ? 'dot on' : 'dot';
-    stxtEl.textContent = on ? 'Connecté' : 'Déconnecté';
+        if (/message|bubble|chat-content|chatMessage/i.test(cn + role)) {
+            if (el.closest?.('#chat') || el.closest?.('#bar')) continue;
+            const t = el.textContent?.trim();
+            if (t && t.length > 5) {
+                const isUser = /outbound|customer|enduser|end-user|cIsConsumer/i.test(cn);
+                if (!isUser) results.push(t);
+            }
+        }
+
+        if (el.shadowRoot) {
+            collectSFTexts(el.shadowRoot, results);
+        }
+    }
+}
+
+/* ── Auto-open SF chat ── */
+function autoOpenSF() {
+    let tries = 0;
+    const iv = setInterval(() => {
+        tries++;
+        if (tries > 20) { clearInterval(iv); return; }
+
+        try {
+            if (typeof embeddedservice_bootstrap !== 'undefined' && embeddedservice_bootstrap.utilAPI) {
+                embeddedservice_bootstrap.utilAPI.launchChat();
+                sfLog('Chat SF ouvert');
+                clearInterval(iv);
+                return;
+            }
+        } catch {}
+
+        const btn = deepQ(document.body,
+            'button[class*="embeddedMessaging"], button[class*="Conversation"], [class*="ConversationButton"] button');
+        if (btn) {
+            btn.click();
+            sfLog('Bouton SF cliqué');
+            clearInterval(iv);
+        }
+    }, 2000);
+}
+setTimeout(autoOpenSF, 3000);
+
+function sfLog(msg) {
+    $('sf-status').textContent = 'SF: ' + msg;
+    console.log('[SF Bridge]', msg);
 }
 </script>
 
-<!-- ── Salesforce Embedded Messaging ── -->
+<!-- ── Salesforce Embedded Messaging (hidden) ── -->
 <script>
 function initEmbeddedMessaging() {
     try {
@@ -663,8 +716,10 @@ function initEmbeddedMessaging() {
                 scrt2URL: 'https://ellisphere2025--devob.sandbox.my.salesforce-scrt.com'
             }
         );
+        document.getElementById('sf-status').textContent = 'SF: initialisé';
     } catch (err) {
-        console.error('Error loading Embedded Messaging:', err);
+        console.error('SF Messaging error:', err);
+        document.getElementById('sf-status').textContent = 'SF: erreur init';
     }
 }
 </script>
