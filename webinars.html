@@ -163,15 +163,37 @@
             transform: translateX(0) !important;
         }
 
-        /* Hide SF default button - we use our own FAB */
+        /* Hide ALL SF elements when panel closed */
+        embedded-messaging,
+        .embeddedMessaging,
+        [class*="embeddedMessaging"],
         .embeddedMessagingConversationButton,
         [class*="ConversationButton"],
-        .embeddedMessagingMinimizedState,
-        embedded-messaging .minimizedButtonWrapper {
+        .embeddedMessagingMinimizedState {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            position: fixed !important;
+            right: -9999px !important;
+            z-index: -1 !important;
+        }
+        /* Show only when panel is open */
+        body.panel-open embedded-messaging,
+        body.panel-open .embeddedMessaging,
+        body.panel-open [class*="embeddedMessaging"] {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            right: 0 !important;
+            z-index: 160 !important;
+        }
+        /* Always hide SF default floating button - we use our FAB */
+        body.panel-open .embeddedMessagingConversationButton,
+        body.panel-open [class*="ConversationButton"],
+        body.panel-open .embeddedMessagingMinimizedState,
+        body.panel-open [class*="minimizedButton"] {
             opacity: 0 !important;
             pointer-events: none !important;
             width: 0 !important; height: 0 !important;
-            overflow: hidden !important;
+            right: -9999px !important;
         }
 
         @media (max-width: 900px) {
@@ -692,24 +714,46 @@ function togglePanel() {
 }
 
 function styleSFWidget() {
-    var w = panelOpen ? '50%' : '0';
-    var h = panelOpen ? 'calc(58vh - 64px)' : '0';
     document.querySelectorAll('iframe').forEach(function(f) {
         var src = f.src || '', cls = f.className || '';
         if (src.indexOf('salesforce') > -1 || src.indexOf('ESW') > -1 || cls.indexOf('embeddedMessaging') > -1) {
-            f.style.cssText =
-                'position:fixed!important;' +
-                'top:calc(64px + 42vh)!important;' +
-                'right:0!important;left:auto!important;bottom:auto!important;' +
-                'width:' + w + '!important;' +
-                'height:' + h + '!important;' +
-                'max-width:none!important;max-height:none!important;' +
-                'border-radius:0!important;border:none!important;' +
-                'border-top:1px solid #1a1a1a!important;' +
-                'box-shadow:none!important;z-index:160!important;' +
-                'transform:translateX(' + (panelOpen ? '0' : '100%') + ')!important;' +
-                'transition:transform .4s cubic-bezier(.4,0,.2,1)!important;';
+            if (panelOpen) {
+                f.style.cssText =
+                    'position:fixed!important;top:calc(64px + 42vh)!important;' +
+                    'right:0!important;left:auto!important;bottom:auto!important;' +
+                    'width:50%!important;height:calc(58vh - 64px)!important;' +
+                    'max-width:none!important;max-height:none!important;' +
+                    'border-radius:0!important;border:none!important;' +
+                    'border-top:1px solid #1a1a1a!important;' +
+                    'box-shadow:none!important;z-index:160!important;' +
+                    'opacity:1!important;pointer-events:auto!important;';
+            } else {
+                f.style.cssText =
+                    'position:fixed!important;right:-9999px!important;' +
+                    'opacity:0!important;pointer-events:none!important;z-index:-1!important;';
+            }
         }
+    });
+
+    // Hide ALL SF floating buttons/wrappers
+    var sels = [
+        'embedded-messaging', '.embeddedMessagingConversationButton',
+        '[class*="ConversationButton"]', '[class*="minimizedButton"]',
+        '[class*="embeddedMessagingMinimized"]'
+    ];
+    sels.forEach(function(s) {
+        try {
+            document.querySelectorAll(s).forEach(function(el) {
+                if (el.tagName === 'IFRAME') return;
+                if (!panelOpen) {
+                    el.style.cssText = 'position:fixed!important;right:-9999px!important;opacity:0!important;pointer-events:none!important;';
+                } else {
+                    el.style.opacity = '';
+                    el.style.right = '';
+                    el.style.pointerEvents = '';
+                }
+            });
+        } catch(e) {}
     });
 }
 
