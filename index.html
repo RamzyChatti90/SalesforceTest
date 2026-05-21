@@ -1002,7 +1002,7 @@ const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
 gltfLoader.setDRACOLoader(dracoLoader);
 
-gltfLoader.load('tour_ia.glb', g => {
+gltfLoader.load('robot_welder.glb', g => {
     const gltfScene = g.scene;
     gltfScene.traverse(child => { if (child.geometry) child.geometry.computeBoundingBox(); });
 
