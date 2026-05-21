@@ -1059,7 +1059,7 @@ gltfLoader.load('robot_welder.glb', g => {
         g.animations.forEach(clip => {
             clip.tracks = clip.tracks.filter(track => {
                 const prop = track.name.split('.').pop();
-                return prop !== 'scale';
+                return prop !== 'scale' && prop !== 'position';
             });
             if (clip.tracks.length) mixer.clipAction(clip).play();
         });
