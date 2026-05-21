@@ -93,11 +93,11 @@
         }
         body.chat-open #fab-chat svg { fill: var(--white); }
 
-        /* ── 3D Agent floating on page ── */
+        /* ── 3D Agent in hero section ── */
         #agent-3d {
-            position: fixed;
-            top: 64px; right: 0;
-            width: 48%; height: calc(100vh - 64px);
+            position: absolute;
+            top: 0; right: 0;
+            width: 50%; height: 100%;
             z-index: 3;
             pointer-events: none;
             overflow: hidden;
@@ -439,6 +439,7 @@
 <!-- ══════════ HERO ══════════ -->
 <section class="hero">
     <div class="geo-deco" id="geoDeco"></div>
+    <div id="agent-3d"><div id="agent-halo"></div></div>
     <span class="hero-tag">Expertize Me</span>
     <h1>SALESFORCE</h1>
     <h2>Plongez au c&oelig;ur de l'IA</h2>
@@ -596,11 +597,6 @@
     <span><span class="footer-brand">Digital Services</span> &mdash; Orange Business x Salesforce</span>
     <span>&copy; 2026 Tous droits reserves</span>
 </footer>
-
-<!-- ══════════ 3D AGENT (floating on page) ══════════ -->
-<div id="agent-3d">
-    <div id="agent-halo"></div>
-</div>
 
 <!-- ══════════ FAB CHAT ══════════ -->
 <button id="fab-chat" title="Parler avec l'assistant IA" onclick="toggleChat()">
