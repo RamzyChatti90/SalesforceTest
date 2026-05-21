@@ -975,15 +975,15 @@ function meshBox(obj, debug) {
     return b;
 }
 
-let savedCenter = null, savedDist = null;
+let savedCamPos = null, savedCamTarget = null;
 
 function fitCamera(object, offset) {
     offset = offset || 1.25;
-    if (savedCenter && savedDist && !editMode) {
-        camera.position.set(savedCenter.x, savedCenter.y, savedCenter.z + savedDist);
-        camera.near = 0.01; camera.far = savedDist * 20;
+    if (savedCamPos && savedCamTarget && !editMode) {
+        camera.position.copy(savedCamPos);
+        camera.near = 0.01; camera.far = 100;
         camera.updateProjectionMatrix();
-        ctrl.target.copy(savedCenter); ctrl.update();
+        ctrl.target.copy(savedCamTarget); ctrl.update();
         return;
     }
     const box = meshBox(object, editMode);
@@ -1039,8 +1039,9 @@ gltfLoader.load('robot_welder.glb', g => {
     camera.position.set(-0.02, 1.09, 0.14);
 
     resizeRenderer();
-    savedCenter = new THREE.Vector3(-0.04, 1.05, 0);
-    savedDist = 0.14;
+    savedCamPos = new THREE.Vector3(-0.02, 1.09, 0.14);
+    savedCamTarget = new THREE.Vector3(-0.04, 1.05, 0);
+    ctrl.target.copy(savedCamTarget); ctrl.update();
 
     console.log('--- Animations (' + g.animations.length + ') ---');
     g.animations.forEach((clip, i) => {
@@ -1194,7 +1195,7 @@ let t = 0;
                 mouthMorphs.forEach(m => { m.mesh.morphTargetInfluences[m.index] = open; });
             }
         } else {
-            model.rotation.y = Math.sin(t * 0.4) * 0.05;
+            model.rotation.y = initRot.y + Math.sin(t * 0.4) * 0.05;
             if (mouthMorphs.length)
                 mouthMorphs.forEach(m => { m.mesh.morphTargetInfluences[m.index] = 0; });
         }
