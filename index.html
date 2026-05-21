@@ -5,16 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agent IA - Demo Interactive</title>
 
-    <!-- Intercept WebSocket avant le chargement SF pour capter les réponses agent -->
+    <!-- Intercept WebSocket + store ref pour envoyer des messages -->
     <script>
     (function() {
         var _WS = WebSocket;
+        window._sfWS = null;
+        window._sfConvId = null;
+        window._sfSendTemplate = null;
+
         window.WebSocket = function(u, p) {
             var ws = p ? new _WS(u, p) : new _WS(u);
+            window._sfWS = ws;
+
+            var origSend = ws.send.bind(ws);
+            ws.send = function(data) {
+                try {
+                    if (typeof data === 'string') {
+                        console.log('[WS-SEND]', data.substring(0, 400));
+                        var d = JSON.parse(data);
+                        if (!window._sfSendTemplate && data.indexOf('StaticContentMessage') > -1) {
+                            window._sfSendTemplate = data;
+                            console.log('[WS] Template capturé');
+                        }
+                    }
+                } catch(x) {}
+                return origSend(data);
+            };
+
             ws.addEventListener('message', function(e) {
                 try {
                     if (typeof e.data === 'string') {
-                        window.dispatchEvent(new CustomEvent('sf-ws', { detail: JSON.parse(e.data) }));
+                        console.log('[WS-RECV]', e.data.substring(0, 400));
+                        var d = JSON.parse(e.data);
+                        window.dispatchEvent(new CustomEvent('sf-ws', { detail: d }));
+                        var cid = null;
+                        try { cid = d.payload?.conversationId; } catch(x){}
+                        try { if(!cid) cid = d.payload?.conversationEntry?.conversationId; } catch(x){}
+                        try {
+                            if(!cid && d.payload?.entries) {
+                                for(var i=0;i<d.payload.entries.length;i++){
+                                    if(d.payload.entries[i].conversationId) { cid = d.payload.entries[i].conversationId; break; }
+                                }
+                            }
+                        } catch(x){}
+                        if (cid) { window._sfConvId = cid; console.log('[WS] ConvId:', cid); }
                     }
                 } catch(x) {}
             });
@@ -43,7 +77,7 @@
             color: #fff; overflow: hidden; height: 100vh;
         }
 
-        /* ── Masquer le widget SF visuellement mais garder le DOM fonctionnel ── */
+        /* ── Widget SF : invisible mais DOM actif (opacity 0) ── */
         .embeddedMessagingConversationButtonWrapper,
         .embeddedMessagingFrame,
         .embedded-messaging,
@@ -51,12 +85,10 @@
         [id*="embeddedMessaging"],
         iframe[name*="ESW"],
         div[data-embedded-messaging] {
-            position: fixed !important;
-            left: -3000px !important;
-            top: 0 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
 
-        /* ── Loader ── */
         #loader {
             position: fixed; inset: 0; background: var(--darker);
             display: flex; flex-direction: column;
@@ -68,13 +100,11 @@
             width: 48px; height: 48px;
             border: 3px solid var(--border);
             border-top-color: var(--cyan);
-            border-radius: 50%;
-            animation: sp 1s linear infinite;
+            border-radius: 50%; animation: sp 1s linear infinite;
         }
         @keyframes sp { to { transform: rotate(360deg); } }
         #loader p { margin-top: 14px; color: var(--dim); font-size: 13px; }
 
-        /* ── Header ── */
         #hdr {
             position: fixed; top: 0; left: 0; right: 0; height: 50px;
             display: flex; align-items: center; justify-content: space-between;
@@ -83,10 +113,7 @@
             border-bottom: 1px solid var(--border); z-index: 100;
         }
         .st { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); }
-        .dt {
-            width: 8px; height: 8px; border-radius: 50%;
-            background: #ef4444; transition: all .3s;
-        }
+        .dt { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; transition: all .3s; }
         .dt.on { background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,.5); }
         .brand {
             font-size: 17px; font-weight: 700;
@@ -94,11 +121,9 @@
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
-        /* ── Viewport 3D ── */
         #vp { position: fixed; inset: 0; z-index: 1; }
         #vp canvas { display: block; }
 
-        /* ── Halo ── */
         #halo {
             position: fixed; top: 35%; left: 50%;
             transform: translate(-50%,-50%);
@@ -120,10 +145,9 @@
             50%     { transform: translate(-50%,-50%) scale(1.08); }
         }
 
-        /* ── Chat ── */
         #chat {
             position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-            width: 94%; max-width: 700px; max-height: 44vh;
+            width: 94%; max-width: 700px; max-height: 40vh;
             overflow-y: auto; padding: 10px;
             display: flex; flex-direction: column; gap: 6px;
             z-index: 10; scrollbar-width: none;
@@ -165,7 +189,6 @@
             40%          { transform: scale(1); }
         }
 
-        /* ── Input ── */
         #bar {
             position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
             width: 94%; max-width: 700px;
@@ -185,10 +208,7 @@
             display: flex; align-items: center; justify-content: center;
             cursor: pointer; transition: all .25s; flex-shrink: 0;
         }
-        #mic {
-            background: linear-gradient(135deg, var(--cyan), var(--purple));
-            color: #fff;
-        }
+        #mic { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: #fff; }
         #mic:hover { transform: scale(1.08); box-shadow: 0 0 20px rgba(0,212,255,.3); }
         #mic.on {
             background: linear-gradient(135deg, #ef4444, var(--purple));
@@ -200,7 +220,6 @@
         }
         #snd { background: rgba(255,255,255,.08); color: var(--cyan); }
         #snd:hover { background: rgba(0,212,255,.15); }
-
         #lis {
             position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%);
             font-size: 12px; color: var(--cyan); z-index: 10;
@@ -209,27 +228,19 @@
         }
         #lis.on { opacity: 1; }
         .wv { display: flex; gap: 2px; align-items: center; }
-        .wv span {
-            width: 3px; border-radius: 2px; background: var(--cyan);
-            animation: wva .8s ease-in-out infinite;
-        }
+        .wv span { width: 3px; border-radius: 2px; background: var(--cyan); animation: wva .8s ease-in-out infinite; }
         .wv span:nth-child(1) { height: 8px; }
         .wv span:nth-child(2) { height: 14px; animation-delay: .15s; }
         .wv span:nth-child(3) { height: 10px; animation-delay: .3s; }
         .wv span:nth-child(4) { height: 16px; animation-delay: .45s; }
         .wv span:nth-child(5) { height: 8px; animation-delay: .6s; }
-        @keyframes wva {
-            0%,100% { height: 4px; }
-            50%      { height: 18px; }
-        }
+        @keyframes wva { 0%,100% { height: 4px; } 50% { height: 18px; } }
 
-        /* ── SF status ── */
         #sf-status {
             position: fixed; top: 54px; right: 12px;
             font-size: 10px; color: var(--dim);
             background: rgba(0,0,0,.5); padding: 4px 10px;
-            border-radius: 8px; z-index: 100;
-            opacity: 0.6;
+            border-radius: 8px; z-index: 100; opacity: 0.6;
         }
     </style>
 </head>
@@ -238,10 +249,7 @@
 <div id="loader"><div class="spin"></div><p>Chargement de l'avatar...</p></div>
 
 <header id="hdr">
-    <div class="st">
-        <span class="dt" id="dot"></span>
-        <span id="stxt">Connexion...</span>
-    </div>
+    <div class="st"><span class="dt" id="dot"></span><span id="stxt">Connexion...</span></div>
     <span class="brand">Assistant IA</span>
     <div style="width:100px"></div>
 </header>
@@ -249,38 +257,30 @@
 <div id="vp"></div>
 <div id="halo"></div>
 <div id="chat"></div>
-
 <div id="lis">
     <div class="wv"><span></span><span></span><span></span><span></span><span></span></div>
     &Eacute;coute en cours...
 </div>
-
 <div id="bar">
     <input type="text" id="inp" placeholder="Tapez votre message ou appuyez sur le micro..." autocomplete="off">
     <button class="cb" id="mic" title="Parler">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-            <line x1="12" y1="19" x2="12" y2="23"/>
-            <line x1="8" y1="23" x2="16" y2="23"/>
+            <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
         </svg>
     </button>
     <button class="cb" id="snd" title="Envoyer">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-        </svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
     </button>
 </div>
-
 <div id="sf-status">SF: en attente...</div>
 
 <script type="importmap">
-{
-    "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-    }
-}
+{ "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+}}
 </script>
 
 <script type="module">
@@ -291,10 +291,10 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const $ = id => document.getElementById(id);
 
-/* ══════════════════ THREE.JS ══════════════════ */
+/* ══════════ THREE.JS ══════════ */
 const scene  = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(0, 1.5, 3);
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 1000);
+camera.position.set(0, 1, 5);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(innerWidth, innerHeight);
@@ -305,55 +305,64 @@ renderer.toneMappingExposure = 1.4;
 $('vp').appendChild(renderer.domElement);
 
 const ctrl = new OrbitControls(camera, renderer.domElement);
-ctrl.enableDamping = true;
-ctrl.dampingFactor = 0.05;
-ctrl.enableZoom = false;
-ctrl.enablePan = false;
-ctrl.target.set(0, 1, 0);
-ctrl.minPolarAngle = Math.PI / 4;
-ctrl.maxPolarAngle = Math.PI / 1.7;
+ctrl.enableDamping = true; ctrl.dampingFactor = 0.05;
+ctrl.enableZoom = false; ctrl.enablePan = false;
+ctrl.minPolarAngle = Math.PI / 4; ctrl.maxPolarAngle = Math.PI / 1.7;
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-const kl = new THREE.DirectionalLight(0xffffff, 1.5);
-kl.position.set(3, 5, 4); scene.add(kl);
-const fl2 = new THREE.DirectionalLight(0x00d4ff, 0.4);
-fl2.position.set(-4, 2, -3); scene.add(fl2);
-const rl2 = new THREE.DirectionalLight(0x8b5cf6, 0.5);
-rl2.position.set(0, 4, -5); scene.add(rl2);
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+const kl = new THREE.DirectionalLight(0xffffff, 1.5); kl.position.set(3, 5, 4); scene.add(kl);
+const fl = new THREE.DirectionalLight(0x00d4ff, 0.4); fl.position.set(-4, 2, -3); scene.add(fl);
+const rl = new THREE.DirectionalLight(0x8b5cf6, 0.5); rl.position.set(0, 4, -5); scene.add(rl);
 
 const PN = 200;
 const pG = new THREE.BufferGeometry();
 const pP = new Float32Array(PN * 3);
-for (let i = 0; i < PN * 3; i++) pP[i] = (Math.random() - .5) * 16;
+for (let i = 0; i < PN * 3; i++) pP[i] = (Math.random() - .5) * 20;
 pG.setAttribute('position', new THREE.BufferAttribute(pP, 3));
-const pM = new THREE.PointsMaterial({ color: 0x00d4ff, size: 0.02, transparent: true, opacity: 0.25 });
-const pts = new THREE.Points(pG, pM);
-scene.add(pts);
+scene.add(new THREE.Points(pG, new THREE.PointsMaterial({ color: 0x00d4ff, size: 0.03, transparent: true, opacity: 0.2 })));
+
+/* ── Fit camera to object ── */
+function fitCamera(object, offset) {
+    offset = offset || 1.25;
+    const box = new THREE.Box3().setFromObject(object);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = camera.fov * (Math.PI / 180);
+    let dist = (maxDim / 2) / Math.tan(fov / 2);
+    dist *= offset;
+    camera.position.set(center.x, center.y, center.z + dist);
+    camera.near = dist / 100;
+    camera.far = dist * 100;
+    camera.updateProjectionMatrix();
+    ctrl.target.copy(center);
+    ctrl.update();
+    console.log('Camera fit - center:', center, 'dist:', dist, 'size:', size);
+}
 
 /* ── Load GLB ── */
 let model = null, mixer = null;
-const gl = new GLTFLoader();
-const dr = new DRACOLoader();
-dr.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
-gl.setDRACOLoader(dr);
+const gltfLoader = new GLTFLoader();
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+gltfLoader.setDRACOLoader(dracoLoader);
 
-gl.load('tour_ia.glb', g => {
+gltfLoader.load('tour_ia.glb', g => {
     model = g.scene;
+
+    model.traverse(child => {
+        if (child.geometry) child.geometry.computeBoundingBox();
+    });
 
     const box = new THREE.Box3().setFromObject(model);
     const sz  = box.getSize(new THREE.Vector3());
     const ctr = box.getCenter(new THREE.Vector3());
-    const maxDim = Math.max(sz.x, sz.y, sz.z, 0.01);
+    console.log('GLB original size:', sz.x, sz.y, sz.z);
+    console.log('GLB original center:', ctr.x, ctr.y, ctr.z);
 
-    const targetSize = 4;
-    const s = targetSize / maxDim;
-    model.scale.setScalar(s);
-
-    box.setFromObject(model);
-    const nc = box.getCenter(new THREE.Vector3());
-    model.position.set(-nc.x, -nc.y, -nc.z);
-    box.setFromObject(model);
-    model.position.y -= box.min.y;
+    model.position.set(-ctr.x, -ctr.y, -ctr.z);
+    const box2 = new THREE.Box3().setFromObject(model);
+    model.position.y -= box2.min.y;
 
     scene.add(model);
 
@@ -362,13 +371,7 @@ gl.load('tour_ia.glb', g => {
         g.animations.forEach(c => mixer.clipAction(c).play());
     }
 
-    const finalBox = new THREE.Box3().setFromObject(model);
-    const fc = finalBox.getCenter(new THREE.Vector3());
-    const fh = finalBox.getSize(new THREE.Vector3()).y;
-    camera.position.set(0, fc.y, fh * 1.4);
-    ctrl.target.set(0, fc.y, 0);
-
-    console.log('Model loaded - size:', sz, 'scale:', s, 'finalHeight:', fh);
+    fitCamera(model, 1.3);
 
     $('loader').classList.add('hide');
     addMsg('Bonjour ! Je suis votre assistant. Posez-moi une question ou appuyez sur le micro pour parler.', 'a');
@@ -386,23 +389,19 @@ gl.load('tour_ia.glb', g => {
 /* ── Animate ── */
 const clock = new THREE.Clock();
 let t = 0, speaking = false, listening = false;
-
 (function loop() {
     requestAnimationFrame(loop);
     const dt = clock.getDelta(); t += dt;
     if (mixer) mixer.update(dt);
     if (model) {
         if (speaking) {
-            model.position.y += Math.sin(t * 5) * 0.003;
             model.rotation.y = Math.sin(t * 2) * 0.04;
         } else if (listening) {
-            model.rotation.x = -0.04 + Math.sin(t * 2) * 0.015;
+            model.rotation.x = -0.03 + Math.sin(t * 2) * 0.01;
         } else {
-            model.position.y += Math.sin(t * 1.2) * 0.001;
             model.rotation.y = Math.sin(t * 0.4) * 0.05;
         }
     }
-    pts.rotation.y += 0.0003;
     ctrl.update();
     renderer.render(scene, camera);
 })();
@@ -411,14 +410,13 @@ addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
+    if (model) fitCamera(model, 1.3);
 });
 
-/* ══════════════════ CHAT UI ══════════════════ */
+/* ══════════ CHAT ══════════ */
 const chatEl = $('chat');
 const shown = new Set();
-
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
 function addMsg(text, who) {
     shown.add(text);
     const d = document.createElement('div');
@@ -428,7 +426,6 @@ function addMsg(text, who) {
     chatEl.scrollTop = chatEl.scrollHeight;
     if (who === 'a') ttsSpeak(text);
 }
-
 function showDots() {
     if ($('typ')) return;
     const d = document.createElement('div');
@@ -439,67 +436,45 @@ function showDots() {
 }
 function hideDots() { $('typ')?.remove(); }
 
-/* ══════════════════ VOICE ══════════════════ */
+/* ══════════ VOICE ══════════ */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null;
-
 if (SR) {
     rec = new SR();
-    rec.lang = 'fr-FR';
-    rec.continuous = false;
-    rec.interimResults = true;
-    rec.onstart = () => {
-        listening = true;
-        $('mic').classList.add('on');
-        $('lis').classList.add('on');
-        $('halo').classList.add('listen');
-    };
+    rec.lang = 'fr-FR'; rec.continuous = false; rec.interimResults = true;
+    rec.onstart = () => { listening = true; $('mic').classList.add('on'); $('lis').classList.add('on'); $('halo').classList.add('listen'); };
     rec.onresult = e => {
         let txt = '';
         for (let i = e.resultIndex; i < e.results.length; i++) txt += e.results[i][0].transcript;
         $('inp').value = txt;
         if (e.results[e.results.length - 1].isFinal) sendMsg(txt);
     };
-    rec.onend = () => {
-        listening = false;
-        $('mic').classList.remove('on');
-        $('lis').classList.remove('on');
-        $('halo').classList.remove('listen');
-    };
-    rec.onerror = () => {
-        listening = false;
-        $('mic').classList.remove('on');
-        $('lis').classList.remove('on');
-        $('halo').classList.remove('listen');
-    };
+    rec.onend = () => { listening = false; $('mic').classList.remove('on'); $('lis').classList.remove('on'); $('halo').classList.remove('listen'); };
+    rec.onerror = () => { listening = false; $('mic').classList.remove('on'); $('lis').classList.remove('on'); $('halo').classList.remove('listen'); };
 }
 
 const synth = window.speechSynthesis;
 let frV = null;
-
 function pickV() {
     const v = synth.getVoices();
     frV = v.find(x => x.lang.startsWith('fr') && /google|microsoft/i.test(x.name))
-       || v.find(x => x.lang.startsWith('fr'))
-       || v[0] || null;
+       || v.find(x => x.lang.startsWith('fr')) || v[0] || null;
 }
-synth.onvoiceschanged = pickV;
-pickV();
+synth.onvoiceschanged = pickV; pickV();
 
 function ttsSpeak(text) {
     synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'fr-FR'; u.rate = 1; u.pitch = 1;
     if (frV) u.voice = frV;
-    u.onstart = () => { speaking = true;  $('halo').classList.add('speak'); };
-    u.onend   = () => { speaking = false; $('halo').classList.remove('speak'); };
+    u.onstart = () => { speaking = true; $('halo').classList.add('speak'); };
+    u.onend = () => { speaking = false; $('halo').classList.remove('speak'); };
     u.onerror = () => { speaking = false; $('halo').classList.remove('speak'); };
     synth.speak(u);
 }
 
-/* ══════════════════ SEND ══════════════════ */
+/* ══════════ SEND ══════════ */
 const sent = new Set();
-
 function sendMsg(text) {
     text = (text || '').trim();
     if (!text) return;
@@ -507,9 +482,8 @@ function sendMsg(text) {
     sent.add(text);
     addMsg(text, 'u');
     showDots();
-    injectIntoSF(text);
+    trySendToSF(text);
 }
-
 $('mic').onclick = () => {
     if (!rec) { addMsg('La reconnaissance vocale nécessite Google Chrome.', 'a'); return; }
     listening ? rec.stop() : rec.start();
@@ -517,68 +491,53 @@ $('mic').onclick = () => {
 $('snd').onclick = () => sendMsg($('inp').value);
 $('inp').onkeydown = e => { if (e.key === 'Enter') sendMsg($('inp').value); };
 
-/* ══════════════════ SALESFORCE BRIDGE ══════════════════ */
+/* ══════════ SALESFORCE BRIDGE ══════════ */
 
-/* ── Inject message into SF widget (hidden) with retries ── */
-function injectIntoSF(text, attempt) {
-    attempt = attempt || 0;
-    if (attempt > 15) { sfLog('Input SF introuvable après 15 essais'); return; }
+function trySendToSF(text) {
+    if (injectDOM(text)) return;
+    sfLog('DOM échoué, retry en cours...');
+    let attempt = 0;
+    const iv = setInterval(() => {
+        attempt++;
+        if (attempt > 12) { clearInterval(iv); sfLog('Envoi échoué'); return; }
+        if (injectDOM(text)) { clearInterval(iv); return; }
+        sfLog('Retry ' + attempt + '...');
+    }, 1000);
+}
 
+function injectDOM(text) {
     try {
         const sfInp = deepQ(document.body,
             'textarea, input[type="text"], [contenteditable="true"]',
-            el => isSFElement(el));
+            el => !el.closest('#bar') && !el.closest('#chat') && !el.closest('#hdr'));
+        if (!sfInp) return false;
 
-        if (sfInp) {
-            setNativeValue(sfInp, text);
-            sfInp.dispatchEvent(new Event('input', { bubbles: true }));
-            sfInp.dispatchEvent(new Event('change', { bubbles: true }));
-            sfInp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+        const proto = sfInp instanceof HTMLTextAreaElement ? HTMLTextAreaElement : HTMLInputElement;
+        const setter = Object.getOwnPropertyDescriptor(proto.prototype, 'value')?.set;
+        if (setter) setter.call(sfInp, text);
+        else sfInp.value = text;
 
-            setTimeout(() => {
-                const btn = deepQ(document.body,
-                    'button[class*="send"], button[class*="Send"], button[aria-label*="Send"], button[aria-label*="Envoyer"], button[title*="Send"]',
-                    el => isSFElement(el));
-                if (btn) {
-                    btn.removeAttribute('disabled');
-                    btn.click();
-                    sfLog('Message envoyé');
-                } else {
-                    sfLog('Bouton send non trouvé, retry...');
-                    setTimeout(() => injectIntoSF(text, attempt + 1), 500);
-                }
-            }, 300);
-            return;
-        }
-        sfLog('Input SF non trouvé, essai ' + (attempt + 1) + '...');
-        setTimeout(() => injectIntoSF(text, attempt + 1), 800);
-    } catch(e) {
-        sfLog('Erreur bridge: ' + e.message);
-        setTimeout(() => injectIntoSF(text, attempt + 1), 800);
-    }
-}
+        sfInp.dispatchEvent(new Event('input', { bubbles: true }));
+        sfInp.dispatchEvent(new Event('change', { bubbles: true }));
 
-function setNativeValue(el, val) {
-    const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement : HTMLInputElement;
-    const setter = Object.getOwnPropertyDescriptor(proto.prototype, 'value')?.set;
-    if (setter) setter.call(el, val);
-    else el.value = val;
-}
-
-function isSFElement(el) {
-    let p = el;
-    while (p) {
-        const cn = typeof p.className === 'string' ? p.className : '';
-        const id = p.id || '';
-        if (/embedded|messaging|esw/i.test(cn + id)) return true;
-        if (p.host) return true;
-        p = p.parentElement || p.parentNode;
-    }
-    return false;
+        setTimeout(() => {
+            const btn = deepQ(document.body,
+                'button[class*="send"], button[class*="Send"], button[aria-label*="Send"], button[aria-label*="Envoyer"]',
+                el => !el.closest('#bar'));
+            if (btn) { btn.click(); sfLog('Envoyé via DOM'); }
+            else {
+                sfInp.dispatchEvent(new KeyboardEvent('keydown', { key:'Enter', code:'Enter', keyCode:13, bubbles:true }));
+                sfInp.dispatchEvent(new KeyboardEvent('keypress', { key:'Enter', code:'Enter', keyCode:13, bubbles:true }));
+                sfInp.dispatchEvent(new KeyboardEvent('keyup', { key:'Enter', code:'Enter', keyCode:13, bubbles:true }));
+                sfLog('Envoyé via Enter key');
+            }
+        }, 200);
+        return true;
+    } catch(e) { return false; }
 }
 
 function deepQ(root, sel, filter) {
-    if (!root || !root.querySelectorAll) return null;
+    if (!root?.querySelectorAll) return null;
     for (const el of root.querySelectorAll(sel)) {
         if (!filter || filter(el)) return el;
     }
@@ -591,14 +550,14 @@ function deepQ(root, sel, filter) {
     return null;
 }
 
-/* ── Detect agent responses: WebSocket intercept ── */
+/* ── Detect responses: WebSocket ── */
 window.addEventListener('sf-ws', e => {
     const txt = extractWSText(e.detail);
-    if (txt && !shown.has(txt) && !sent.has(txt) && txt.length > 5) {
+    if (txt && !shown.has(txt) && !sent.has(txt) && txt.length > 3) {
         shown.add(txt);
         hideDots();
         addMsg(txt, 'a');
-        sfLog('Réponse via WS');
+        sfLog('Réponse reçue');
     }
 });
 
@@ -616,61 +575,51 @@ function extractWSText(d) {
                 if (c?.text) return c.text;
                 if (e.entryPayload) {
                     try {
-                        const ep = JSON.parse(e.entryPayload);
+                        const ep = typeof e.entryPayload === 'string' ? JSON.parse(e.entryPayload) : e.entryPayload;
                         if (ep.abstractMessage?.staticContent?.text) return ep.abstractMessage.staticContent.text;
                     } catch {}
                 }
             }
         }
-        if (d.payload?.conversationEntry?.entryPayload) {
-            try {
-                const ep = JSON.parse(d.payload.conversationEntry.entryPayload);
-                const role = d.payload.conversationEntry?.sender?.role;
-                if (role !== 'EndUser' && role !== 'Customer' && ep.abstractMessage?.staticContent?.text)
-                    return ep.abstractMessage.staticContent.text;
-            } catch {}
+        if (d.payload?.conversationEntry) {
+            const ce = d.payload.conversationEntry;
+            const role = ce.sender?.role;
+            if (role !== 'EndUser' && role !== 'Customer' && ce.entryPayload) {
+                try {
+                    const ep = typeof ce.entryPayload === 'string' ? JSON.parse(ce.entryPayload) : ce.entryPayload;
+                    if (ep.abstractMessage?.staticContent?.text) return ep.abstractMessage.staticContent.text;
+                } catch {}
+            }
         }
     } catch {}
     return null;
 }
 
-/* ── Detect agent responses: DOM polling (fallback) ── */
-let lastPoll = '';
-
+/* ── Detect responses: DOM poll fallback ── */
 setInterval(() => {
     const texts = [];
-    collectSFTexts(document.body, texts);
-
+    collectTexts(document.body, texts);
     for (const txt of texts) {
-        if (txt.length > 8 && !shown.has(txt) && !sent.has(txt) && txt !== lastPoll) {
-            if (/rejoint|joined|left|quitté|aujourd'hui|AM|PM/i.test(txt) && txt.length < 60) continue;
-            lastPoll = txt;
+        if (txt.length > 8 && !shown.has(txt) && !sent.has(txt)) {
+            if (/rejoint|joined|left|quitté|AM\b|PM\b|aujourd/i.test(txt) && txt.length < 60) continue;
             shown.add(txt);
             hideDots();
             addMsg(txt, 'a');
-            sfLog('Réponse via DOM');
+            sfLog('Réponse via DOM poll');
         }
     }
 }, 800);
 
-function collectSFTexts(root, results) {
-    if (!root || !root.querySelectorAll) return;
+function collectTexts(root, res) {
+    if (!root?.querySelectorAll) return;
     for (const el of root.querySelectorAll('*')) {
         const cn = typeof el.className === 'string' ? el.className : '';
-        const role = el.getAttribute?.('role') || '';
-
-        if (/message|bubble|chat-content|chatMessage/i.test(cn + role)) {
-            if (el.closest?.('#chat') || el.closest?.('#bar')) continue;
+        if (/message|bubble|chat-content|chatMessage/i.test(cn)) {
+            if (el.closest?.('#chat') || el.closest?.('#bar') || el.closest?.('#hdr')) continue;
             const t = el.textContent?.trim();
-            if (t && t.length > 5) {
-                const isUser = /outbound|customer|enduser|end-user|cIsConsumer/i.test(cn);
-                if (!isUser) results.push(t);
-            }
+            if (t && t.length > 5 && !/outbound|customer|enduser/i.test(cn)) res.push(t);
         }
-
-        if (el.shadowRoot) {
-            collectSFTexts(el.shadowRoot, results);
-        }
+        if (el.shadowRoot) collectTexts(el.shadowRoot, res);
     }
 }
 
@@ -678,36 +627,28 @@ function collectSFTexts(root, results) {
 function autoOpenSF() {
     let tries = 0;
     const iv = setInterval(() => {
-        tries++;
-        if (tries > 20) { clearInterval(iv); return; }
-
+        if (++tries > 20) { clearInterval(iv); return; }
         try {
             if (typeof embeddedservice_bootstrap !== 'undefined' && embeddedservice_bootstrap.utilAPI) {
                 embeddedservice_bootstrap.utilAPI.launchChat();
-                sfLog('Chat SF ouvert');
+                sfLog('Chat ouvert');
                 clearInterval(iv);
                 return;
             }
         } catch {}
-
-        const btn = deepQ(document.body,
-            'button[class*="embeddedMessaging"], button[class*="Conversation"], [class*="ConversationButton"] button');
-        if (btn) {
-            btn.click();
-            sfLog('Bouton SF cliqué');
-            clearInterval(iv);
-        }
+        const btn = deepQ(document.body, 'button[class*="embeddedMessaging"], button[class*="Conversation"]');
+        if (btn) { btn.click(); sfLog('Bouton cliqué'); clearInterval(iv); }
     }, 2000);
 }
 setTimeout(autoOpenSF, 3000);
 
 function sfLog(msg) {
     $('sf-status').textContent = 'SF: ' + msg;
-    console.log('[SF Bridge]', msg);
+    console.log('[SF]', msg);
 }
 </script>
 
-<!-- ── Salesforce Embedded Messaging (hidden) ── -->
+<!-- Salesforce Embedded Messaging -->
 <script>
 function initEmbeddedMessaging() {
     try {
@@ -716,13 +657,11 @@ function initEmbeddedMessaging() {
             '00DKE000000H0qv',
             'Github_Messaging',
             'https://ellisphere2025--devob.sandbox.my.site.com/ESWGithubMessaging1779289119988',
-            {
-                scrt2URL: 'https://ellisphere2025--devob.sandbox.my.salesforce-scrt.com'
-            }
+            { scrt2URL: 'https://ellisphere2025--devob.sandbox.my.salesforce-scrt.com' }
         );
         document.getElementById('sf-status').textContent = 'SF: initialisé';
     } catch (err) {
-        console.error('SF Messaging error:', err);
+        console.error('SF error:', err);
         document.getElementById('sf-status').textContent = 'SF: erreur init';
     }
 }
