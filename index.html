@@ -102,9 +102,22 @@
             pointer-events: none;
             overflow: hidden;
         }
+        #agent-3d canvas {
+            pointer-events: auto;
+            cursor: pointer;
+        }
         body.edit-mode #agent-3d {
             pointer-events: auto;
             z-index: 200;
+        }
+        body.edit-mode #agent-3d canvas { cursor: default; }
+
+        #agent-3d.speaking {
+            animation: avatar-glow 0.8s ease-in-out infinite;
+        }
+        @keyframes avatar-glow {
+            0%, 100% { filter: drop-shadow(0 0 6px rgba(255,121,0,0.2)); }
+            50% { filter: drop-shadow(0 0 24px rgba(255,121,0,0.6)) drop-shadow(0 0 48px rgba(255,121,0,0.3)); }
         }
 
         /* ── Edit mode UI ── */
@@ -1134,10 +1147,19 @@ window.addEventListener('toggle-edit', toggleEdit);
 window.addEventListener('set-mode', e => setMode(e.detail));
 window.addEventListener('copy-config', copyConfig);
 window.addEventListener('reset-config', resetConfig);
-window.addEventListener('avatar-speak-start', () => { speaking = true; });
+window.addEventListener('avatar-speak-start', () => {
+    speaking = true;
+    container.classList.add('speaking');
+});
 window.addEventListener('avatar-speak-stop', () => {
     speaking = false;
+    container.classList.remove('speaking');
     if (model) { model.position.y = baseY; }
+});
+
+renderer.domElement.addEventListener('click', () => {
+    if (editMode) return;
+    if (typeof window.toggleChat === 'function') window.toggleChat();
 });
 
 document.addEventListener('keydown', e => {
