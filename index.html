@@ -833,40 +833,16 @@ window.addEventListener('message', function(e) {
         }
         if (!data || typeof data !== 'object') return;
 
-        console.log('postMessage from', e.origin, ':', JSON.stringify(data).substring(0, 300));
-
-        var text = null;
-
-        if (data.type === 'chasitor.chatMessage' || data.type === 'agent.chatMessage') {
-            text = data.message || data.text;
-        }
-        if (data.payload) {
-            var p = data.payload;
-            text = text || p.text || p.message || p.content || p.body;
-            if (p.messageContent) text = text || p.messageContent.text || p.messageContent.value;
-            if (p.entries) {
-                p.entries.forEach(function(entry) {
-                    if (entry.entryType === 'Message' && entry.sender && entry.sender.role !== 'EndUser') {
-                        text = text || entry.messageText || entry.content;
-                    }
-                });
-            }
-        }
-        if (data.message && typeof data.message === 'object') {
-            text = text || data.message.text || data.message.value || data.message.body;
-        }
-        if (data.content && typeof data.content === 'string') text = text || data.content;
-
-        if (text && typeof text === 'string' && text.length > 1 && text.length < 2000 && text !== lastSpokenMsg) {
-            var isAgent = true;
-            if (data.sender === 'customer' || data.sender === 'enduser' || data.sender === 'EndUser') isAgent = false;
-            if (data.role === 'EndUser' || data.role === 'customer') isAgent = false;
-            if (data.type === 'chasitor.chatMessage') isAgent = false;
-
-            if (isAgent) {
-                lastSpokenMsg = text;
-                console.log('Avatar speaks:', text);
-                speak(text);
+        if (data.method === 'EMBEDDED_MESSAGING_SCREENREADER_ANNOUNCEMENT' && data.data && data.data.text) {
+            var raw = data.data.text;
+            var match = raw.match(/a dit (.+?)(?:\s+à \d|$)/s);
+            if (match && match[1]) {
+                var msg = match[1].replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
+                if (msg.length > 1 && msg !== lastSpokenMsg) {
+                    lastSpokenMsg = msg;
+                    console.log('Avatar speaks:', msg);
+                    speak(msg);
+                }
             }
         }
     } catch(err) { console.log('postMessage parse error:', err); }
@@ -1059,7 +1035,13 @@ gltfLoader.load('tour_ia.glb', g => {
 
     if (g.animations.length) {
         mixer = new THREE.AnimationMixer(gltfScene);
-        g.animations.forEach(c => mixer.clipAction(c).play());
+        g.animations.forEach(clip => {
+            clip.tracks = clip.tracks.filter(track => {
+                const prop = track.name.split('.').pop();
+                return prop !== 'scale';
+            });
+            if (clip.tracks.length) mixer.clipAction(clip).play();
+        });
     }
 
     initPos = model.position.clone();
