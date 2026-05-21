@@ -85,31 +85,84 @@
             box-shadow: 0 6px 28px rgba(255,121,0,.5);
         }
         #fab-chat svg { width: 26px; height: 26px; fill: var(--black); }
-        #fab-chat .badge {
-            position: absolute; top: -2px; right: -2px;
-            width: 16px; height: 16px; border-radius: 50%;
-            background: #10b981; border: 2px solid var(--black);
-            display: none;
+        #fab-chat .ico-close { display: none; }
+        body.panel-open #fab-chat .ico-chat { display: none; }
+        body.panel-open #fab-chat .ico-close { display: block; }
+        body.panel-open #fab-chat {
+            background: #333; box-shadow: 0 4px 16px rgba(0,0,0,.4);
         }
-        #fab-chat .badge.on { display: block; }
+        body.panel-open #fab-chat svg { fill: var(--white); }
 
-        /* SF widget override : right-aligned on webinars page */
+        /* ── Agent Panel (right half) ── */
+        #agent-panel {
+            position: fixed;
+            top: 64px; right: 0;
+            width: 50%; height: calc(100vh - 64px);
+            background: linear-gradient(180deg, #08080f, #0a0a0a);
+            border-left: 1px solid #1a1a1a;
+            z-index: 150;
+            transform: translateX(100%);
+            transition: transform .4s cubic-bezier(.4,0,.2,1);
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        body.panel-open #agent-panel { transform: translateX(0); }
+
+        #panel-close {
+            position: absolute; top: 12px; left: 12px;
+            width: 32px; height: 32px; border-radius: 50%;
+            border: 1px solid #333; background: rgba(0,0,0,.7);
+            color: #999; font-size: 16px; cursor: pointer; z-index: 10;
+            display: flex; align-items: center; justify-content: center;
+            transition: all .2s;
+        }
+        #panel-close:hover { background: var(--orange); color: #000; border-color: var(--orange); }
+
+        #agent-3d {
+            flex: 0 0 42%; position: relative; overflow: hidden;
+            border-bottom: 1px solid #1a1a1a;
+        }
+        #agent-3d canvas { display: block; width: 100%; height: 100%; }
+
+        #agent-halo {
+            position: absolute; top: 40%; left: 50%;
+            transform: translate(-50%,-50%);
+            width: 200px; height: 200px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,121,0,.08), transparent 70%);
+            pointer-events: none;
+        }
+
+        #agent-label {
+            position: absolute; bottom: 12px; left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px; color: #555; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+
+        /* SF iframe → fills bottom of panel */
         .embeddedMessagingFrame,
         iframe[class*="embeddedMessaging"] {
             position: fixed !important;
-            bottom: 100px !important;
-            right: 20px !important;
+            top: calc(64px + 42vh) !important;
+            right: 0 !important;
             left: auto !important;
-            transform: none !important;
-            width: 400px !important;
-            max-width: 90vw !important;
-            height: 520px !important;
-            max-height: 70vh !important;
-            border-radius: 16px !important;
-            border: 1px solid #333 !important;
-            box-shadow: 0 12px 48px rgba(0,0,0,.6) !important;
-            z-index: 190 !important;
+            bottom: auto !important;
+            transform: translateX(100%) !important;
+            width: 50% !important;
+            height: calc(58vh - 64px) !important;
+            max-width: none !important;
+            max-height: none !important;
+            border-radius: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            z-index: 160 !important;
+            transition: transform .4s cubic-bezier(.4,0,.2,1) !important;
         }
+        body.panel-open .embeddedMessagingFrame,
+        body.panel-open iframe[class*="embeddedMessaging"] {
+            transform: translateX(0) !important;
+        }
+
         /* Hide SF default button - we use our own FAB */
         .embeddedMessagingConversationButton,
         [class*="ConversationButton"],
@@ -119,6 +172,14 @@
             pointer-events: none !important;
             width: 0 !important; height: 0 !important;
             overflow: hidden !important;
+        }
+
+        @media (max-width: 900px) {
+            #agent-panel { width: 100%; }
+            body.panel-open .embeddedMessagingFrame,
+            body.panel-open iframe[class*="embeddedMessaging"] {
+                width: 100% !important;
+            }
         }
 
         /* ── HERO ── */
@@ -374,7 +435,7 @@
         <div class="nav-links">
             <a href="#actu">Actualites</a>
             <a href="#webinars" class="active">Webinars</a>
-            <a href="index.html">Agent IA</a>
+            <a href="#" onclick="togglePanel();return false">Agent IA</a>
         </div>
     </div>
     <div class="nav-logos">
@@ -535,10 +596,10 @@
     <h2>Parlez a notre Agent IA</h2>
     <p>Posez vos questions sur nos webinars et laissez notre assistant
        intelligent vous guider.</p>
-    <a href="index.html" class="btn-cta">
+    <button class="btn-cta" onclick="togglePanel()">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
         Lancer l'assistant
-    </a>
+    </button>
 </section>
 
 <!-- ══════════ FOOTER ══════════ -->
@@ -547,10 +608,19 @@
     <span>&copy; 2026 Tous droits reserves</span>
 </footer>
 
+<!-- ══════════ AGENT PANEL (right half) ══════════ -->
+<div id="agent-panel">
+    <button id="panel-close" onclick="togglePanel()">&times;</button>
+    <div id="agent-3d">
+        <div id="agent-halo"></div>
+        <span id="agent-label">Agent IA</span>
+    </div>
+</div>
+
 <!-- ══════════ FAB CHAT ══════════ -->
-<button id="fab-chat" title="Parler avec l'assistant IA" onclick="openSFChat()">
-    <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-    <span class="badge" id="fab-badge"></span>
+<button id="fab-chat" title="Parler avec l'assistant IA" onclick="togglePanel()">
+    <svg class="ico-chat" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+    <svg class="ico-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
 </button>
 
 <!-- ══════════ GEOMETRIC PARTICLES ══════════ -->
@@ -601,37 +671,165 @@
 })();
 </script>
 
-<!-- ══════════ SF FAB LOGIC ══════════ -->
+<!-- ══════════ PANEL TOGGLE + SF RESTYLE ══════════ -->
 <script>
-var sfReady = false;
+var panelOpen = false;
+var sfLaunched = false;
 
-function openSFChat() {
-    try {
-        if (typeof embeddedservice_bootstrap !== 'undefined' && embeddedservice_bootstrap.utilAPI) {
-            embeddedservice_bootstrap.utilAPI.launchChat();
-            sfReady = true;
-            document.getElementById('fab-badge').classList.add('on');
-        }
-    } catch(e) { console.log('[SF] Not ready yet', e); }
+function togglePanel() {
+    panelOpen = !panelOpen;
+    document.body.classList.toggle('panel-open', panelOpen);
+
+    if (panelOpen && !sfLaunched) {
+        try {
+            if (typeof embeddedservice_bootstrap !== 'undefined' && embeddedservice_bootstrap.utilAPI) {
+                embeddedservice_bootstrap.utilAPI.launchChat();
+                sfLaunched = true;
+            }
+        } catch(e) {}
+    }
+    styleSFWidget();
 }
 
 function styleSFWidget() {
+    var w = panelOpen ? '50%' : '0';
+    var h = panelOpen ? 'calc(58vh - 64px)' : '0';
     document.querySelectorAll('iframe').forEach(function(f) {
         var src = f.src || '', cls = f.className || '';
         if (src.indexOf('salesforce') > -1 || src.indexOf('ESW') > -1 || cls.indexOf('embeddedMessaging') > -1) {
             f.style.cssText =
-                'position:fixed!important;bottom:100px!important;right:20px!important;' +
-                'left:auto!important;transform:none!important;width:400px!important;' +
-                'max-width:90vw!important;height:520px!important;max-height:70vh!important;' +
-                'border-radius:16px!important;border:1px solid #333!important;' +
-                'box-shadow:0 12px 48px rgba(0,0,0,.6)!important;z-index:190!important;';
+                'position:fixed!important;' +
+                'top:calc(64px + 42vh)!important;' +
+                'right:0!important;left:auto!important;bottom:auto!important;' +
+                'width:' + w + '!important;' +
+                'height:' + h + '!important;' +
+                'max-width:none!important;max-height:none!important;' +
+                'border-radius:0!important;border:none!important;' +
+                'border-top:1px solid #1a1a1a!important;' +
+                'box-shadow:none!important;z-index:160!important;' +
+                'transform:translateX(' + (panelOpen ? '0' : '100%') + ')!important;' +
+                'transition:transform .4s cubic-bezier(.4,0,.2,1)!important;';
         }
     });
 }
 
 var _sfObs = new MutationObserver(styleSFWidget);
 _sfObs.observe(document.body, { childList: true, subtree: true });
-setInterval(styleSFWidget, 2000);
+setInterval(styleSFWidget, 3000);
+</script>
+
+<!-- ══════════ THREE.JS AGENT ══════════ -->
+<script type="importmap">
+{ "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const container = document.getElementById('agent-3d');
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 500);
+camera.position.set(0, 1, 5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.4;
+container.insertBefore(renderer.domElement, container.firstChild);
+
+const ctrl = new OrbitControls(camera, renderer.domElement);
+ctrl.enableDamping = true; ctrl.dampingFactor = 0.05;
+ctrl.enableZoom = false; ctrl.enablePan = false;
+ctrl.minPolarAngle = Math.PI / 4; ctrl.maxPolarAngle = Math.PI / 1.7;
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+const kl = new THREE.DirectionalLight(0xffffff, 1.5); kl.position.set(3, 5, 4); scene.add(kl);
+const fl = new THREE.DirectionalLight(0xff7900, 0.3); fl.position.set(-4, 2, -3); scene.add(fl);
+const rl = new THREE.DirectionalLight(0xff7900, 0.4); rl.position.set(0, 4, -5); scene.add(rl);
+
+function meshBox(obj) {
+    const b = new THREE.Box3();
+    obj.traverse(c => { if (c.isMesh && c.visible) b.expandByObject(c); });
+    if (b.isEmpty()) b.setFromObject(obj);
+    return b;
+}
+
+function fitCamera(object, offset) {
+    offset = offset || 1.25;
+    const box = meshBox(object);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = camera.fov * (Math.PI / 180);
+    let dist = (maxDim / 2) / Math.tan(fov / 2) * offset;
+    camera.position.set(center.x, center.y, center.z + dist);
+    camera.near = 0.01; camera.far = dist * 20;
+    camera.updateProjectionMatrix();
+    ctrl.target.copy(center); ctrl.update();
+}
+
+function resizeRenderer() {
+    const w = container.clientWidth, h = container.clientHeight;
+    if (w === 0 || h === 0) return;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+}
+
+let model = null, mixer = null;
+const gltfLoader = new GLTFLoader();
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+gltfLoader.setDRACOLoader(dracoLoader);
+
+gltfLoader.load('tour_ia.glb', g => {
+    model = g.scene;
+    model.traverse(child => { if (child.geometry) child.geometry.computeBoundingBox(); });
+
+    let box = meshBox(model);
+    const sz = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(sz.x, sz.y, sz.z, 0.001);
+    model.scale.setScalar(3 / maxDim);
+
+    box = meshBox(model);
+    const ctr = box.getCenter(new THREE.Vector3());
+    model.position.set(-ctr.x, -ctr.y, -ctr.z);
+    box = meshBox(model);
+    model.position.y -= box.min.y;
+
+    scene.add(model);
+
+    if (g.animations.length) {
+        mixer = new THREE.AnimationMixer(model);
+        g.animations.forEach(c => mixer.clipAction(c).play());
+    }
+
+    resizeRenderer();
+    fitCamera(model, 1.3);
+});
+
+const clock = new THREE.Clock();
+let t = 0;
+(function loop() {
+    requestAnimationFrame(loop);
+    const dt = clock.getDelta(); t += dt;
+    if (mixer) mixer.update(dt);
+    if (model) model.rotation.y = Math.sin(t * 0.4) * 0.05;
+    ctrl.update();
+    renderer.render(scene, camera);
+})();
+
+new ResizeObserver(() => {
+    resizeRenderer();
+    if (model) fitCamera(model, 1.3);
+}).observe(container);
 </script>
 
 <!-- Salesforce Embedded Messaging -->
