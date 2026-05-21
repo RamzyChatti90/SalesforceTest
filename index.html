@@ -77,17 +77,7 @@
             color: #fff; overflow: hidden; height: 100vh;
         }
 
-        /* ── Widget SF : invisible mais DOM actif (opacity 0) ── */
-        .embeddedMessagingConversationButtonWrapper,
-        .embeddedMessagingFrame,
-        .embedded-messaging,
-        [class*="embeddedMessaging"],
-        [id*="embeddedMessaging"],
-        iframe[name*="ESW"],
-        div[data-embedded-messaging] {
-            opacity: 0 !important;
-            pointer-events: none !important;
-        }
+        /* ── Widget SF visible, intégré dans le layout ── */
 
         #loader {
             position: fixed; inset: 0; background: var(--darker);
@@ -357,12 +347,18 @@ gltfLoader.load('tour_ia.glb', g => {
     const box = new THREE.Box3().setFromObject(model);
     const sz  = box.getSize(new THREE.Vector3());
     const ctr = box.getCenter(new THREE.Vector3());
-    console.log('GLB original size:', sz.x, sz.y, sz.z);
-    console.log('GLB original center:', ctr.x, ctr.y, ctr.z);
+    const maxDim = Math.max(sz.x, sz.y, sz.z, 0.001);
+    console.log('GLB original size:', sz.x, sz.y, sz.z, 'maxDim:', maxDim);
 
-    model.position.set(-ctr.x, -ctr.y, -ctr.z);
+    const targetSize = 3;
+    model.scale.setScalar(targetSize / maxDim);
+
     const box2 = new THREE.Box3().setFromObject(model);
-    model.position.y -= box2.min.y;
+    const ctr2 = box2.getCenter(new THREE.Vector3());
+    model.position.set(-ctr2.x, -ctr2.y, -ctr2.z);
+
+    const box3 = new THREE.Box3().setFromObject(model);
+    model.position.y -= box3.min.y;
 
     scene.add(model);
 
