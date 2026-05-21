@@ -70,6 +70,57 @@
             font-size: 12px; font-weight: 700;
         }
 
+        /* ── FAB SF Chat ── */
+        #fab-chat {
+            position: fixed; bottom: 28px; right: 28px;
+            width: 60px; height: 60px; border-radius: 50%;
+            background: var(--orange);
+            border: none; cursor: pointer; z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 20px rgba(255,121,0,.35);
+            transition: all .25s;
+        }
+        #fab-chat:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 28px rgba(255,121,0,.5);
+        }
+        #fab-chat svg { width: 26px; height: 26px; fill: var(--black); }
+        #fab-chat .badge {
+            position: absolute; top: -2px; right: -2px;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: #10b981; border: 2px solid var(--black);
+            display: none;
+        }
+        #fab-chat .badge.on { display: block; }
+
+        /* SF widget override : right-aligned on webinars page */
+        .embeddedMessagingFrame,
+        iframe[class*="embeddedMessaging"] {
+            position: fixed !important;
+            bottom: 100px !important;
+            right: 20px !important;
+            left: auto !important;
+            transform: none !important;
+            width: 400px !important;
+            max-width: 90vw !important;
+            height: 520px !important;
+            max-height: 70vh !important;
+            border-radius: 16px !important;
+            border: 1px solid #333 !important;
+            box-shadow: 0 12px 48px rgba(0,0,0,.6) !important;
+            z-index: 190 !important;
+        }
+        /* Hide SF default button - we use our own FAB */
+        .embeddedMessagingConversationButton,
+        [class*="ConversationButton"],
+        .embeddedMessagingMinimizedState,
+        embedded-messaging .minimizedButtonWrapper {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            width: 0 !important; height: 0 !important;
+            overflow: hidden !important;
+        }
+
         /* ── HERO ── */
         .hero {
             position: relative;
@@ -496,6 +547,12 @@
     <span>&copy; 2026 Tous droits reserves</span>
 </footer>
 
+<!-- ══════════ FAB CHAT ══════════ -->
+<button id="fab-chat" title="Parler avec l'assistant IA" onclick="openSFChat()">
+    <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+    <span class="badge" id="fab-badge"></span>
+</button>
+
 <!-- ══════════ GEOMETRIC PARTICLES ══════════ -->
 <script>
 (function() {
@@ -544,5 +601,56 @@
 })();
 </script>
 
+<!-- ══════════ SF FAB LOGIC ══════════ -->
+<script>
+var sfReady = false;
+
+function openSFChat() {
+    try {
+        if (typeof embeddedservice_bootstrap !== 'undefined' && embeddedservice_bootstrap.utilAPI) {
+            embeddedservice_bootstrap.utilAPI.launchChat();
+            sfReady = true;
+            document.getElementById('fab-badge').classList.add('on');
+        }
+    } catch(e) { console.log('[SF] Not ready yet', e); }
+}
+
+function styleSFWidget() {
+    document.querySelectorAll('iframe').forEach(function(f) {
+        var src = f.src || '', cls = f.className || '';
+        if (src.indexOf('salesforce') > -1 || src.indexOf('ESW') > -1 || cls.indexOf('embeddedMessaging') > -1) {
+            f.style.cssText =
+                'position:fixed!important;bottom:100px!important;right:20px!important;' +
+                'left:auto!important;transform:none!important;width:400px!important;' +
+                'max-width:90vw!important;height:520px!important;max-height:70vh!important;' +
+                'border-radius:16px!important;border:1px solid #333!important;' +
+                'box-shadow:0 12px 48px rgba(0,0,0,.6)!important;z-index:190!important;';
+        }
+    });
+}
+
+var _sfObs = new MutationObserver(styleSFWidget);
+_sfObs.observe(document.body, { childList: true, subtree: true });
+setInterval(styleSFWidget, 2000);
+</script>
+
+<!-- Salesforce Embedded Messaging -->
+<script>
+function initEmbeddedMessaging() {
+    try {
+        embeddedservice_bootstrap.settings.language = 'fr';
+        embeddedservice_bootstrap.init(
+            '00DKE000000H0qv',
+            'Github_Messaging',
+            'https://ellisphere2025--devob.sandbox.my.site.com/ESWGithubMessaging1779289119988',
+            { scrt2URL: 'https://ellisphere2025--devob.sandbox.my.salesforce-scrt.com' }
+        );
+        document.getElementById('fab-badge').classList.add('on');
+    } catch (err) {
+        console.error('SF error:', err);
+    }
+}
+</script>
+<script src="https://ellisphere2025--devob.sandbox.my.site.com/ESWGithubMessaging1779289119988/assets/js/bootstrap.min.js" onload="initEmbeddedMessaging()"></script>
 </body>
 </html>
