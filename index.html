@@ -95,9 +95,9 @@
 
         /* ── 3D Agent in hero section ── */
         #agent-3d {
-            position: absolute;
-            top: 0; right: 0; bottom: 0;
-            width: 55%;
+            position: fixed;
+            top: 64px; right: 0;
+            width: 55%; height: calc(100vh - 64px);
             z-index: 3;
             pointer-events: none;
             overflow: hidden;
@@ -1033,14 +1033,14 @@ gltfLoader.load('robot_welder.glb', g => {
 
     scene.add(model);
 
-    model.position.set(0, 1.15, 0);
-    model.rotation.set(0, -0.04, 0);
-    model.scale.set(2.62, 2.62, 2.62);
-    camera.position.set(-0.08, 1.18, 0.27);
+    model.position.set(0, 1.12, 0);
+    model.rotation.set(0, 0.02, 0);
+    model.scale.set(2.07, 1.97, 2.62);
+    camera.position.set(0, 1.15, 0.14);
 
     resizeRenderer();
-    savedCenter = new THREE.Vector3(0, 1.15, 0);
-    savedDist = 0.27;
+    savedCenter = new THREE.Vector3(0, 1.12, 0);
+    savedDist = 0.14;
 
     if (g.animations.length) {
         mixer = new THREE.AnimationMixer(gltfScene);
