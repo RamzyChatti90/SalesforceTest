@@ -311,23 +311,27 @@ for (let i = 0; i < PN * 3; i++) pP[i] = (Math.random() - .5) * 20;
 pG.setAttribute('position', new THREE.BufferAttribute(pP, 3));
 scene.add(new THREE.Points(pG, new THREE.PointsMaterial({ color: 0x00d4ff, size: 0.03, transparent: true, opacity: 0.2 })));
 
-/* ── Fit camera to object ── */
+/* ── Bounding box from visible meshes only ── */
+function meshBox(obj) {
+    const b = new THREE.Box3();
+    obj.traverse(c => { if (c.isMesh && c.visible) b.expandByObject(c); });
+    if (b.isEmpty()) b.setFromObject(obj);
+    return b;
+}
+
 function fitCamera(object, offset) {
     offset = offset || 1.25;
-    const box = new THREE.Box3().setFromObject(object);
+    const box = meshBox(object);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
     const fov = camera.fov * (Math.PI / 180);
-    let dist = (maxDim / 2) / Math.tan(fov / 2);
-    dist *= offset;
+    let dist = (maxDim / 2) / Math.tan(fov / 2) * offset;
     camera.position.set(center.x, center.y, center.z + dist);
-    camera.near = dist / 100;
-    camera.far = dist * 100;
+    camera.near = 0.01; camera.far = dist * 20;
     camera.updateProjectionMatrix();
-    ctrl.target.copy(center);
-    ctrl.update();
-    console.log('Camera fit - center:', center, 'dist:', dist, 'size:', size);
+    ctrl.target.copy(center); ctrl.update();
+    console.log('Camera fit - size:', size, 'dist:', dist);
 }
 
 /* ── Load GLB ── */
@@ -344,21 +348,20 @@ gltfLoader.load('tour_ia.glb', g => {
         if (child.geometry) child.geometry.computeBoundingBox();
     });
 
-    const box = new THREE.Box3().setFromObject(model);
+    let box = meshBox(model);
     const sz  = box.getSize(new THREE.Vector3());
-    const ctr = box.getCenter(new THREE.Vector3());
     const maxDim = Math.max(sz.x, sz.y, sz.z, 0.001);
-    console.log('GLB original size:', sz.x, sz.y, sz.z, 'maxDim:', maxDim);
+    console.log('GLB mesh size:', sz.x.toFixed(1), sz.y.toFixed(1), sz.z.toFixed(1), 'maxDim:', maxDim.toFixed(1));
 
     const targetSize = 3;
     model.scale.setScalar(targetSize / maxDim);
 
-    const box2 = new THREE.Box3().setFromObject(model);
-    const ctr2 = box2.getCenter(new THREE.Vector3());
-    model.position.set(-ctr2.x, -ctr2.y, -ctr2.z);
+    box = meshBox(model);
+    const ctr = box.getCenter(new THREE.Vector3());
+    model.position.set(-ctr.x, -ctr.y, -ctr.z);
 
-    const box3 = new THREE.Box3().setFromObject(model);
-    model.position.y -= box3.min.y;
+    box = meshBox(model);
+    model.position.y -= box.min.y;
 
     scene.add(model);
 
