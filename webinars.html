@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Services - Expertize Me | Webinars</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --orange: #FF7900;
+            --orange-dark: #E56D00;
+            --sf-blue: #00A1E0;
+            --black: #000000;
+            --dark: #0a0a0a;
+            --card-bg: #141414;
+            --card-border: #222;
+            --white: #ffffff;
+            --gray: #999;
+            --light-gray: #ccc;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: var(--black);
+            color: var(--white);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0;
+            height: 64px; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 40px;
+            background: rgba(0,0,0,.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid #1a1a1a;
+        }
+        .nav-left { display: flex; align-items: center; gap: 24px; }
+        .nav-brand {
+            font-size: 20px; font-weight: 800;
+            color: var(--orange);
+            letter-spacing: -0.5px;
+        }
+        .nav-links { display: flex; gap: 28px; }
+        .nav-links a {
+            color: var(--gray); text-decoration: none;
+            font-size: 13px; font-weight: 500;
+            letter-spacing: 0.5px; text-transform: uppercase;
+            transition: color .2s;
+        }
+        .nav-links a:hover, .nav-links a.active { color: var(--white); }
+        .nav-logos { display: flex; align-items: center; gap: 16px; }
+        .logo-ob {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 14px; font-weight: 700; color: var(--white);
+        }
+        .logo-ob .sq {
+            width: 32px; height: 32px; background: var(--orange);
+            border-radius: 4px; display: flex; align-items: center;
+            justify-content: center; font-size: 8px; font-weight: 700;
+            color: var(--white); letter-spacing: 0.3px;
+        }
+        .logo-sf {
+            background: var(--sf-blue); color: var(--white);
+            padding: 6px 14px; border-radius: 20px;
+            font-size: 12px; font-weight: 700;
+        }
+
+        /* ── HERO ── */
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+            justify-content: center;
+            padding: 120px 60px 80px;
+            overflow: hidden;
+        }
+        .hero-tag {
+            font-size: 13px; font-weight: 600;
+            color: var(--orange); text-transform: uppercase;
+            letter-spacing: 3px; margin-bottom: 20px;
+        }
+        .hero h1 {
+            font-size: clamp(42px, 6vw, 72px);
+            font-weight: 900; line-height: 1.05;
+            letter-spacing: -2px; margin-bottom: 12px;
+        }
+        .hero h2 {
+            font-size: clamp(22px, 3vw, 34px);
+            font-weight: 700; color: var(--orange);
+            margin-bottom: 28px;
+        }
+        .hero p {
+            font-size: 18px; color: var(--light-gray);
+            max-width: 650px; line-height: 1.7;
+        }
+        .hero-date {
+            margin-top: 40px; font-size: 15px;
+            color: var(--orange); font-weight: 600;
+        }
+
+        /* Geometric decoration */
+        .geo-deco {
+            position: absolute; top: 0; right: 0;
+            width: 55%; height: 100%;
+            pointer-events: none; overflow: hidden;
+        }
+        .sq-particle {
+            position: absolute;
+            background: var(--orange);
+            transform: rotate(45deg);
+            opacity: 0.9;
+        }
+        .sq-particle.white { background: var(--white); }
+        .sq-particle.small { width: 8px; height: 8px; }
+        .sq-particle.med { width: 14px; height: 14px; }
+        .sq-particle.large { width: 22px; height: 22px; }
+
+        /* ── SECTIONS ── */
+        section { padding: 80px 40px; position: relative; }
+        .section-tag {
+            font-size: 12px; font-weight: 700;
+            color: var(--orange); text-transform: uppercase;
+            letter-spacing: 3px; margin-bottom: 8px;
+        }
+        .section-title {
+            font-size: clamp(28px, 4vw, 44px);
+            font-weight: 900; letter-spacing: -1px;
+            margin-bottom: 48px;
+        }
+        .section-divider {
+            width: 60px; height: 3px;
+            background: var(--orange);
+            margin-bottom: 48px;
+        }
+
+        /* ── ACTUALITÉS ── */
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+        }
+        .news-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 28px;
+            transition: all .3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .news-card::before {
+            content: '';
+            position: absolute; top: 0; left: 0;
+            width: 4px; height: 100%;
+            background: var(--orange);
+            transform: scaleY(0);
+            transform-origin: top;
+            transition: transform .3s;
+        }
+        .news-card:hover::before { transform: scaleY(1); }
+        .news-card:hover { border-color: #333; transform: translateY(-2px); }
+        .news-badge {
+            display: inline-block;
+            font-size: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1px;
+            padding: 4px 10px; border-radius: 4px;
+            margin-bottom: 14px;
+        }
+        .news-badge.new { background: var(--orange); color: var(--black); }
+        .news-badge.event { background: #1a3a50; color: var(--sf-blue); }
+        .news-badge.update { background: #2a2a2a; color: var(--gray); }
+        .news-card h3 {
+            font-size: 17px; font-weight: 700;
+            margin-bottom: 10px; line-height: 1.4;
+        }
+        .news-card p {
+            font-size: 14px; color: var(--gray);
+            line-height: 1.6;
+        }
+        .news-date {
+            margin-top: 16px; font-size: 12px;
+            color: var(--orange); font-weight: 600;
+        }
+
+        /* ── WEBINARS GRID ── */
+        .webinars-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 28px;
+        }
+        .webinar-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all .3s;
+        }
+        .webinar-card:hover {
+            border-color: var(--orange);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(255,121,0,.08);
+        }
+        .webinar-header {
+            padding: 28px 28px 20px;
+            position: relative;
+        }
+        .webinar-number {
+            position: absolute; top: 20px; right: 24px;
+            font-size: 48px; font-weight: 900;
+            color: rgba(255,121,0,.1);
+            line-height: 1;
+        }
+        .webinar-tag {
+            display: inline-block;
+            font-size: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1.5px;
+            color: var(--orange);
+            margin-bottom: 12px;
+        }
+        .webinar-card h3 {
+            font-size: 19px; font-weight: 800;
+            line-height: 1.3; margin-bottom: 12px;
+            padding-right: 40px;
+        }
+        .webinar-card .desc {
+            font-size: 14px; color: var(--gray);
+            line-height: 1.6;
+        }
+        .webinar-footer {
+            padding: 16px 28px;
+            border-top: 1px solid var(--card-border);
+            display: flex; align-items: center;
+            justify-content: space-between;
+        }
+        .webinar-date {
+            font-size: 13px; color: var(--gray); font-weight: 500;
+        }
+        .webinar-date span { color: var(--orange); }
+        .btn-pdf {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 8px 18px;
+            background: rgba(255,121,0,.1);
+            border: 1px solid rgba(255,121,0,.3);
+            border-radius: 8px;
+            color: var(--orange);
+            font-size: 13px; font-weight: 600;
+            text-decoration: none;
+            transition: all .2s;
+        }
+        .btn-pdf:hover {
+            background: var(--orange);
+            color: var(--black);
+            border-color: var(--orange);
+        }
+        .btn-pdf svg { width: 16px; height: 16px; }
+
+        /* ── CTA SECTION ── */
+        .cta-section {
+            text-align: center;
+            padding: 100px 40px;
+            position: relative;
+        }
+        .cta-section h2 {
+            font-size: clamp(28px, 4vw, 40px);
+            font-weight: 900; margin-bottom: 16px;
+        }
+        .cta-section p {
+            font-size: 16px; color: var(--gray);
+            max-width: 500px; margin: 0 auto 32px;
+        }
+        .btn-cta {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 14px 32px;
+            background: var(--orange);
+            color: var(--black);
+            border: none; border-radius: 8px;
+            font-size: 15px; font-weight: 700;
+            text-decoration: none;
+            transition: all .2s;
+            cursor: pointer;
+        }
+        .btn-cta:hover {
+            background: var(--orange-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(255,121,0,.25);
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            padding: 32px 40px;
+            border-top: 1px solid #1a1a1a;
+            display: flex; align-items: center;
+            justify-content: space-between;
+            font-size: 12px; color: #555;
+        }
+        footer .footer-brand {
+            font-weight: 700; color: var(--orange);
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            nav { padding: 0 16px; }
+            .nav-links { display: none; }
+            .hero { padding: 100px 24px 60px; }
+            section { padding: 60px 20px; }
+            .geo-deco { width: 40%; opacity: 0.4; }
+            .webinars-grid { grid-template-columns: 1fr; }
+            .news-grid { grid-template-columns: 1fr; }
+            footer { flex-direction: column; gap: 8px; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="nav-left">
+        <span class="nav-brand">Digital Services</span>
+        <div class="nav-links">
+            <a href="#actu">Actualites</a>
+            <a href="#webinars" class="active">Webinars</a>
+            <a href="index.html">Agent IA</a>
+        </div>
+    </div>
+    <div class="nav-logos">
+        <div class="logo-ob">
+            <div class="sq">orange</div>
+            Business
+        </div>
+        <div class="logo-sf">salesforce</div>
+    </div>
+</nav>
+
+<!-- ══════════ HERO ══════════ -->
+<section class="hero">
+    <div class="geo-deco" id="geoDeco"></div>
+    <span class="hero-tag">Expertize Me</span>
+    <h1>SALESFORCE</h1>
+    <h2>Plongez au c&oelig;ur de l'IA</h2>
+    <p>Decouvrez Agentforce, la nouvelle generation d'agents IA qui booste
+       vos performances commerciales et revolutionne l'experience client.</p>
+    <div class="hero-date">02/10/2025</div>
+</section>
+
+<!-- ══════════ ACTUALITÉS ══════════ -->
+<section id="actu">
+    <span class="section-tag">Actualites</span>
+    <h2 class="section-title">Dernieres nouvelles</h2>
+    <div class="section-divider"></div>
+
+    <div class="news-grid">
+        <div class="news-card">
+            <span class="news-badge new">Nouveau</span>
+            <h3>Agentforce : la revolution des agents autonomes arrive</h3>
+            <p>Salesforce lance Agentforce, sa plateforme d'agents IA autonomes.
+               Configurables sans code, ils executent des taches complexes en toute securite
+               grace a Einstein Trust Layer.</p>
+            <div class="news-date">Mai 2026</div>
+        </div>
+        <div class="news-card">
+            <span class="news-badge event">Evenement</span>
+            <h3>Prochain Expertize Me : Data & IA - Tendances 2026</h3>
+            <p>Analyse des tendances IA et donnees, avec un focus sur les reglementations
+               (GDPR, AI Act, Data Act) et les certifications (SecNumCloud, SOC2).</p>
+            <div class="news-date">Juin 2026</div>
+        </div>
+        <div class="news-card">
+            <span class="news-badge update">Mise a jour</span>
+            <h3>Qlik Talend Cloud : analytique & integration unifiees</h3>
+            <p>La plateforme combine les capacites analytiques de Qlik et l'integration
+               de donnees de Talend Cloud avec mouvement de donnees en temps reel et IA generative.</p>
+            <div class="news-date">Avril 2026</div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════ WEBINARS ══════════ -->
+<section id="webinars">
+    <span class="section-tag">Expertize Me</span>
+    <h2 class="section-title">Nos Webinars</h2>
+    <div class="section-divider"></div>
+
+    <div class="webinars-grid">
+
+        <div class="webinar-card">
+            <div class="webinar-header">
+                <span class="webinar-number">01</span>
+                <span class="webinar-tag">Expertize Me</span>
+                <h3>Data Management & Gouvernance</h3>
+                <p class="desc">Distinction entre la gouvernance des donnees (decision, conformite)
+                   et la gestion des donnees (mise en oeuvre pratique). Accessibilite, securite
+                   et qualite des donnees.</p>
+            </div>
+            <div class="webinar-footer">
+                <span class="webinar-date"><span>&#9654;</span> Replay disponible</span>
+                <a href="#" class="btn-pdf">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+                    PDF
+                </a>
+            </div>
+        </div>
+
+        <div class="webinar-card">
+            <div class="webinar-header">
+                <span class="webinar-number">02</span>
+                <span class="webinar-tag">Expertize Me</span>
+                <h3>Data & IA - Tendances 2026</h3>
+                <p class="desc">Analyse des tendances IA et donnees. Focus sur les reglementations
+                   (GDPR, AI Act, Data Act) et les certifications. Solutions : catalogues de donnees,
+                   controle d'acces, dashboards qualite.</p>
+            </div>
+            <div class="webinar-footer">
+                <span class="webinar-date"><span>&#9654;</span> Replay disponible</span>
+                <a href="#" class="btn-pdf">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+                    PDF
+                </a>
+            </div>
+        </div>
+
+        <div class="webinar-card">
+            <div class="webinar-header">
+                <span class="webinar-number">03</span>
+                <span class="webinar-tag">Expertize Me</span>
+                <h3>Mind Map Change</h3>
+                <p class="desc">Approche structuree pour la conduite du changement.
+                   Carte mentale reliant objectifs, impacts, phases et strategies
+                   comme la communication et la formation.</p>
+            </div>
+            <div class="webinar-footer">
+                <span class="webinar-date"><span>&#9654;</span> Replay disponible</span>
+                <a href="#" class="btn-pdf">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+                    PDF
+                </a>
+            </div>
+        </div>
+
+        <div class="webinar-card">
+            <div class="webinar-header">
+                <span class="webinar-number">04</span>
+                <span class="webinar-tag">Expertize Me</span>
+                <h3>Agentforce - Agents autonomes</h3>
+                <p class="desc">Presentation des agents autonomes configurables via Agentforce.
+                   Utilisation de l'IA et d'outils comme Einstein Trust Layer
+                   pour des operations securisees et efficaces.</p>
+            </div>
+            <div class="webinar-footer">
+                <span class="webinar-date"><span>&#9654;</span> Replay disponible</span>
+                <a href="#" class="btn-pdf">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+                    PDF
+                </a>
+            </div>
+        </div>
+
+        <div class="webinar-card">
+            <div class="webinar-header">
+                <span class="webinar-number">05</span>
+                <span class="webinar-tag">Expertize Me</span>
+                <h3>Qlik Talend Cloud</h3>
+                <p class="desc">Plateforme combinant les capacites analytiques de Qlik
+                   et l'integration de donnees de Talend Cloud. Mouvement de donnees
+                   en temps reel, ETL/ELT et IA generative.</p>
+            </div>
+            <div class="webinar-footer">
+                <span class="webinar-date"><span>&#9654;</span> Replay disponible</span>
+                <a href="#" class="btn-pdf">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+                    PDF
+                </a>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- ══════════ CTA ══════════ -->
+<section class="cta-section">
+    <h2>Parlez a notre Agent IA</h2>
+    <p>Posez vos questions sur nos webinars et laissez notre assistant
+       intelligent vous guider.</p>
+    <a href="index.html" class="btn-cta">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        Lancer l'assistant
+    </a>
+</section>
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer>
+    <span><span class="footer-brand">Digital Services</span> &mdash; Orange Business x Salesforce</span>
+    <span>&copy; 2026 Tous droits reserves</span>
+</footer>
+
+<!-- ══════════ GEOMETRIC PARTICLES ══════════ -->
+<script>
+(function() {
+    const container = document.getElementById('geoDeco');
+    if (!container) return;
+    const particles = [];
+    const count = 90;
+
+    for (let i = 0; i < count; i++) {
+        const el = document.createElement('div');
+        el.className = 'sq-particle';
+
+        const r = Math.random();
+        if (r < 0.33) el.classList.add('small');
+        else if (r < 0.66) el.classList.add('med');
+        else el.classList.add('large');
+
+        if (Math.random() > 0.55) el.classList.add('white');
+
+        const angle = (i / count) * Math.PI * 2.5 + Math.random() * 0.5;
+        const radius = 120 + i * 3.5 + Math.random() * 60;
+        const cx = 55, cy = 50;
+
+        el.style.left = (cx + Math.cos(angle) * (radius / 6)) + '%';
+        el.style.top  = (cy + Math.sin(angle) * (radius / 5)) + '%';
+        el.style.opacity = 0.3 + Math.random() * 0.7;
+
+        container.appendChild(el);
+        particles.push({ el, angle, radius, speed: 0.0002 + Math.random() * 0.0003 });
+    }
+
+    let t = 0;
+    function animate() {
+        t++;
+        for (const p of particles) {
+            p.angle += p.speed;
+            const cx = 55, cy = 50;
+            const x = cx + Math.cos(p.angle) * (p.radius / 6);
+            const y = cy + Math.sin(p.angle) * (p.radius / 5);
+            p.el.style.left = x + '%';
+            p.el.style.top  = y + '%';
+        }
+        requestAnimationFrame(animate);
+    }
+    animate();
+})();
+</script>
+
+</body>
+</html>
