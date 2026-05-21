@@ -816,13 +816,61 @@ function toggleChat() {
                 }
             } catch(e) {}
         }
-        speak("Bonjour ! Je suis votre assistant Digital Services. Comment puis-je vous aider ?");
     } else {
         if ('speechSynthesis' in window) speechSynthesis.cancel();
         window.dispatchEvent(new Event('avatar-speak-stop'));
     }
     styleSFWidget();
 }
+
+/* ── Intercept SF agent messages via postMessage ── */
+var lastSpokenMsg = '';
+window.addEventListener('message', function(e) {
+    try {
+        var data = e.data;
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch(ex) { return; }
+        }
+        if (!data || typeof data !== 'object') return;
+
+        console.log('postMessage from', e.origin, ':', JSON.stringify(data).substring(0, 300));
+
+        var text = null;
+
+        if (data.type === 'chasitor.chatMessage' || data.type === 'agent.chatMessage') {
+            text = data.message || data.text;
+        }
+        if (data.payload) {
+            var p = data.payload;
+            text = text || p.text || p.message || p.content || p.body;
+            if (p.messageContent) text = text || p.messageContent.text || p.messageContent.value;
+            if (p.entries) {
+                p.entries.forEach(function(entry) {
+                    if (entry.entryType === 'Message' && entry.sender && entry.sender.role !== 'EndUser') {
+                        text = text || entry.messageText || entry.content;
+                    }
+                });
+            }
+        }
+        if (data.message && typeof data.message === 'object') {
+            text = text || data.message.text || data.message.value || data.message.body;
+        }
+        if (data.content && typeof data.content === 'string') text = text || data.content;
+
+        if (text && typeof text === 'string' && text.length > 1 && text.length < 2000 && text !== lastSpokenMsg) {
+            var isAgent = true;
+            if (data.sender === 'customer' || data.sender === 'enduser' || data.sender === 'EndUser') isAgent = false;
+            if (data.role === 'EndUser' || data.role === 'customer') isAgent = false;
+            if (data.type === 'chasitor.chatMessage') isAgent = false;
+
+            if (isAgent) {
+                lastSpokenMsg = text;
+                console.log('Avatar speaks:', text);
+                speak(text);
+            }
+        }
+    } catch(err) { console.log('postMessage parse error:', err); }
+});
 
 function styleSFWidget() {
     document.querySelectorAll('iframe').forEach(function(f) {
